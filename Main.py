@@ -5,29 +5,6 @@ import collections
 import math
 import numpy as np
 
-# class Node(object):
-# 	def __init__(self):
-# 		self.min_cost = float("inf")
-
-# 	def get_min_cost():
-# 		return min_cost
-
-# 	def set_min_cost(cost):
-# 		self.min_cost = cost
-
-# 	def update_min_cost(cost):
-# 		if (cost < min_cost):
-# 			min_cost = cost
-
-def get_x(day):
-	return int(day) - 1
-
-def get_y(curr_size, start_size, max_size, diff):
-	if (curr_size == start_size):
-		return 0
-	else:
-		return int( (curr_size - start_size)/(max_size - start_size)/diff )
-
 def main(lst):
 	diff = Decimal(0.1)
 	max_sizes = build_max_size_array(lst["start_day"], lst["end_day"])
@@ -37,10 +14,20 @@ def main(lst):
 	start_size = max_sizes[start_day]
 	max_size = max_sizes[end_day]
 	num_sizes = (max_sizes[end_day] - max_sizes[start_day]) / diff + Decimal(1)
-	# print(num_sizes)
-	graph = [ [ Decimal("Infinity") for j in range(num_sizes) ] for i in range(lst["end_day"])]
-	graph[0][0] = Decimal(0)
-	# print np.arange(float(start_size), float(max_size), 0.1)[0]
+
+	graph = {}
+	for curr_day in range(start_day, end_day+Decimal(1)):
+		curr_day = Decimal(curr_day)
+		graph[curr_day] = {}
+		print curr_day
+
+		curr_size = start_size
+		end_size = max_sizes[curr_day]
+		while curr_size <= end_size:
+			curr_size = Decimal(curr_size)
+			graph[curr_day][curr_size] = Decimal("Infinity")
+			curr_size += diff
+	graph[Decimal(1)][start_size] = Decimal(0)
 
 	for curr_day in range(start_day, end_day):
 		curr_day = Decimal(curr_day)
@@ -49,13 +36,11 @@ def main(lst):
 		end_size = max_sizes[curr_day]
 		while curr_size <= end_size:		
 			curr_size = Decimal(curr_size)
-			curr_x = get_x(curr_day)
-			curr_y = get_y(curr_size, start_size, end_size, diff)
-			curr_cost = graph[curr_x][curr_y]
+			curr_cost = graph[curr_day][curr_size]
 
 			max_size_day = day_by_size_max_feeding(curr_size, max_sizes)
 			num_next_sizes = (max_sizes[max_size_day+Decimal(1)] - max_sizes[max_size_day]) / diff
-			# print num_next_sizes
+			
 			curr_max_size = max_sizes[max_size_day]
 			curr_max_rate = max_rates[max_size_day]
 			### ??? ###
@@ -66,13 +51,13 @@ def main(lst):
 			counter = 0
 			curr_next_size = curr_size
 			curr_next_cost = curr_cost + curr_min_rate
-			print("%d: %f: %d" % (curr_day, curr_size, num_next_sizes))
+
 			while counter < num_next_sizes:
-				next_x = get_x(curr_day+Decimal(1))
-				next_y = get_y(curr_next_size, start_size, max_size, diff)
-				next_cost = graph[next_x][next_y]
+			
+				next_cost = graph[curr_day+Decimal(1)][curr_next_size]
+			
 				if curr_next_cost < next_cost:
-					graph[next_x][next_y] = Decimal(curr_next_cost)
+					graph[curr_day+Decimal(1)][curr_next_size] = Decimal(curr_next_cost)
 
 				curr_next_cost += slope
 				curr_next_size += diff
