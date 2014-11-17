@@ -1,5 +1,4 @@
 from Equations import *
-from Grapher import *
 
 import sys
 from decimal import *
@@ -54,7 +53,7 @@ class Node(object):
 		self.day = day
 		self.size = size		
 		self.min_cost = min_cost
-		self.min_edge = None
+		self.min_edge = Decimal(0)
 		self.prev_node = None
 
 def simulate(lst):
@@ -177,21 +176,25 @@ def simulate(lst):
 	last_column = graph[int(end_day + extend_days - 1)]
 
 	# iterate over each element
-	for i in range(len(last_column)):		
+	for i in range(len(last_column)):
+		# cache current node	
 		curr_node = last_column[i]
-		min_cost = curr_node.min_cost
-		curr_size = get_y_inv(i, start_size, diff)
-		revenue = get_revenue(start_day, discount, animal_price, end_day+extend_days, curr_size)
-		total_cost = food_cost * min_cost
+
+		# calculate profit based on revenue and total expenses
+		revenue = get_revenue(start_day, discount, animal_price, curr_node.day, curr_node.size)
 		rent_cost = 0 # facility_cost * (end_day - start_day)
-		profit = revenue - total_cost - rent_cost
+		total_cost = food_cost * curr_node.min_cost + rent_cost
+		profit = revenue - total_cost
+
+		# extend_days is greater than zero, calculate and subtract the
+		#	opportunity cost
 		if (extend_days > Decimal(0)):
 			Pa = animal_price
 			Pl = animal_price
 			oc = opportunity_cost(Pa, max_size, end_day-start_day+Decimal(1),
-				Pl, curr_size, end_day+extend_days, discount)
+				Pl, curr_node.size, curr_node.day, discount)
 			profit -= oc
-		print ("%d, %f, %f, %f, %f, %f, %f" % (end_day+extend_days, curr_size, min_cost, total_cost, profit, curr_node.min_edge, curr_node.prev_node.size))
+		print ("%d, %f, %f, %f, %f, %f, %f" % (curr_node.day, curr_node.size, curr_node.min_cost, total_cost, profit, curr_node.min_edge, curr_node.prev_node.size))
 
 	write_animal_weight_csv(max_sizes[end_day], animal_price)
 	write_food_cost_csv(food_cost, start_day, end_day)
@@ -199,7 +202,7 @@ def simulate(lst):
 	return graph
 
 # by default, set end_day to 80
-def main(end_day=10, extend_days=0):
+def main(end_day=80, extend_days=0):
 	lst = {
 		"start_day": Decimal(1),
 		"end_day": end_day,
@@ -218,3 +221,5 @@ if __name__ == "__main__":
 		main(int(sys.argv[1]))
 	elif (len(sys.argv) >= 3):
 		main(int(sys.argv[1]), int(sys.argv[2]))
+	else:
+		main()
