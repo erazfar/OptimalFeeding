@@ -6,6 +6,7 @@ from decimal import *
 import collections
 import math
 import numpy as np
+import csv
 
 # transforms the given day to the x-coordinate of the graph
 def get_x(day, start_day):
@@ -26,6 +27,27 @@ def get_y_inv(y, start_size, diff):
 # returns the # of sizes between the given max and min, both inclusive
 def get_num_sizes(max_size, min_size, diff):
 	return int((max_size - min_size)/diff + 1)
+
+# writes the facility cost per day to a CSV file
+def write_facility_cost_csv(facility_cost, start_day, end_day):
+	file_name = 'facility_cost.csv'
+	writer = csv.writer(open(file_name, 'wb'), delimiter=',')
+	for i in range (start_day, end_day+1):
+		writer.writerow([str(i), str(facility_cost)]) #change to access array indexs after csv input implemented
+
+# writes the food cost per day to a CSV file
+def write_food_cost_csv(food_cost, start_day, end_day):
+	file_name = 'food_cost.csv'
+	writer = csv.writer(open(file_name, 'wb'), delimiter=',')
+	for i in range (start_day, end_day+1):
+		writer.writerow([str(i), str(food_cost)]) #change to access array indexs after csv input implemented
+
+#writes the final weight and price to a CSV file
+def write_animal_weight_csv(animal_weight, animal_price):
+	file_name = 'animal_weight.csv'
+	writer = csv.writer(open(file_name, 'wb'), delimiter=',')
+	writer.writerow([str(animal_weight), str(animal_price)])
+
 
 class Node(object):
 	def __init__(self, day, size, min_cost=Decimal("Infinity")):
@@ -171,6 +193,9 @@ def simulate(lst):
 			profit -= oc
 		print ("%d, %f, %f, %f, %f, %f, %f" % (end_day+extend_days, curr_size, min_cost, total_cost, profit, curr_node.min_edge, curr_node.prev_node.size))
 
+	write_animal_weight_csv(max_sizes[end_day], animal_price)
+	write_food_cost_csv(food_cost, start_day, end_day)
+	write_facility_cost_csv(facility_cost, start_day, end_day)
 	return graph
 
 # by default, set end_day to 80
