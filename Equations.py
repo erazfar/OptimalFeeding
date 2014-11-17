@@ -69,7 +69,7 @@ def discount_factor_value(day, discount):
     value = Decimal(math.exp(Decimal(-1) * discount * (day)))
     return value
 
-def get_revenue(start_day, discount, sell_price, w_day, w_size, from_feeding):    
+def get_revenue(start_day, discount, sell_price, w_day, w_size):    
     day_diff = (w_day) - start_day;
     gain = sell_price * (w_size) * discount_factor_value(w_day, discount)
     return gain
@@ -84,10 +84,6 @@ def build_facililty_array(cost_array, discount, start_day, end_day):
         else :
             facility_array[Decimal(today)] = today_cost + facility_array[Decimal(today)-Decimal('1')]
     return facility_array
-    
-    
-
-    
     
     ############################DO NOT NEED TO MODIFY##################
     
@@ -109,7 +105,6 @@ def build_max_size_array(start_day, end_day):
     
 ##need to check the correctness of the logic
 def day_by_size_max_feeding(size,max_size_array):
-    getcontext().prec = 4
     for today in max_size_array:
         if(max_size_array[today] >= size):
         #and today <= end_day):
@@ -121,11 +116,10 @@ def day_by_size_max_feeding(size,max_size_array):
 
 ##input size and get the size by max feeding
 def size_by_size_max_feeding(size, max_size_array):
-    getcontext().prec = 4
     size = Decimal(size);
     ##getcontext().prec = 6;
     for today in max_size_array:
-        if (max_size_array[today] >= size):            
+        if (max_size_array[today] >= size):
             # and today <= (end_day)):
             ## finding the slope of current day ##
             tempint = (max_size_array[(today+Decimal(1))] - max_size_array[(today)]);
