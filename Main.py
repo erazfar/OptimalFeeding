@@ -1,6 +1,7 @@
 from Equations import *
 
 import sys
+import os
 import collections
 import math
 import numpy as np
@@ -28,24 +29,61 @@ def get_num_sizes(max_size, min_size, diff):
 
 # writes the facility cost per day to a CSV file
 def write_facility_cost_csv(facility_cost, start_day, end_day):
-	file_name = 'facility_cost.csv'
+	file_name = 'facility_cost_output.csv'
 	writer = csv.writer(open(file_name, 'wb'), delimiter=',')
 	for i in range (start_day, end_day+1):
 		writer.writerow([str(i), str(facility_cost)]) #change to access array indexs after csv input implemented
 
 # writes the food cost per day to a CSV file
 def write_food_cost_csv(food_cost, start_day, end_day):
-	file_name = 'food_cost.csv'
+	file_name = 'food_cost_output.csv'
 	writer = csv.writer(open(file_name, 'wb'), delimiter=',')
 	for i in range (start_day, end_day+1):
 		writer.writerow([str(i), str(food_cost)]) #change to access array indexs after csv input implemented
 
 #writes the final weight and price to a CSV file
-def write_animal_weight_csv(animal_weight, animal_price):
-	file_name = 'animal_weight.csv'
+def write_animal_weight_csv(animal_weight, animal_price, end_day):
+	file_name = 'animal_weight_output.csv'
 	writer = csv.writer(open(file_name, 'wb'), delimiter=',')
-	writer.writerow([str(animal_weight), str(animal_price)])
+	writer.writerow([str(animal_weight), str(animal_price[end_day-1])])
 
+# loads the animal_price.csv values into the animal_price list
+def load_animal_price_csv(lst):
+	print "Loading animal_price CSV"
+	animal_price_array = [0 for  i in range(lst["start_day"], lst["end_day"] + 1) ]
+	with open('animal_price.csv', 'rb') as csvfile:
+		csvreader = csv.reader(csvfile, delimiter = ' ', quotechar = '|')
+		i = 0
+		for row in csvreader:
+			curr_row = row[0].split(',')
+			animal_price_array[i] = float(curr_row[1])
+			i += 1
+			if i > lst["end_day"] - 1:
+				break
+	return animal_price_array
+
+#loads the facility_cost.csv values into the facility_cost list
+def load_facility_cost_csv(lst):
+	print "Loading facility_cost CSV"
+	facility_cost_array = [0 for  i in range(lst["start_day"], lst["end_day"] + 1) ]
+	with open('facility_cost.csv', 'rb') as csvfile:
+		csvreader = csv.reader(csvfile, delimiter = ' ', quotechar = '|')
+		i = 0
+		for row in csvreader:
+			curr_row = row[0].split(',')
+			facility_cost_array[i] = float(curr_row[1])
+			i += 1
+			if i > lst["end_day"] - 1:
+				break
+	return facility_cost_array
+
+# calculates total facility costs based on the starting day, ending day, and cost per day
+def calculate_facility_costs(lst):
+	facility_cost_array = lst["facility_cost"]
+	total_cost = 0
+	for i in range(lst["start_day"], lst["end_day"]):
+		total_cost += facility_cost_array[i]
+	return total_cost
 
 class Node(object):
 	def __init__(self, day, size, min_cost=float("inf")):
@@ -180,8 +218,8 @@ def simulate(lst):
 		curr_node = last_column[i]
 
 		# calculate profit based on revenue and total expenses
-		revenue = get_revenue(start_day, discount, animal_price, curr_node.day, curr_node.size)
-		rent_cost = 0 # facility_cost * (end_day - start_day)
+		revenue = get_revenue(start_day, discount, animal_price[end_day - 1], curr_node.day, curr_node.size)
+		rent_cost = 0 # calculate_facility_costs(lst)
 		total_cost = food_cost * curr_node.min_cost + rent_cost
 		profit = revenue - total_cost
 
@@ -195,7 +233,7 @@ def simulate(lst):
 			profit -= oc
 		print ("%d, %f, %f, %f, %f, %f, %f" % (curr_node.day, curr_node.size, curr_node.min_cost, total_cost, profit, curr_node.min_edge, curr_node.prev_node.size))
 
-	write_animal_weight_csv(max_sizes[end_day], animal_price)
+	write_animal_weight_csv(max_sizes[end_day], animal_price, end_day)
 	write_food_cost_csv(food_cost, start_day, end_day)
 	write_facility_cost_csv(facility_cost, start_day, end_day)
 	return graph
@@ -205,12 +243,19 @@ def main(start_day=1, end_day=80, extend_days=0):
 	lst = {
 		"start_day": start_day,
 		"end_day": end_day,
-		"animal_price":2.89,
-		"food_cost":0.25,
-		"facility_cost":0.35,
+		"animal_price":[2.89 for i in range(start_day, end_day + 1)],
+		"food_cost":0.25, #need to implement variable food cost
+		"facility_cost":[0.35 for i in range(start_day, end_day + 1)],
 		"r_value":0.075,
 		"extend_days": extend_days
 	}
+
+	# check if animal_price and facility_cost CSV files are provided for use
+	if os.path.isfile('animal_price.csv'):
+		lst["animal_price"] = load_animal_price_csv(lst)
+	if os.path.isfile('facility_cost.csv'):
+	 	lst["facility_cost"] = load_facility_cost_csv(lst)
+
 	g = simulate(lst)
 	return g
 
