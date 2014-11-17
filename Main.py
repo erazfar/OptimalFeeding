@@ -5,6 +5,10 @@ import collections
 import math
 import numpy as np
 
+import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+
 def simulate(lst):
 	# unbox lst struct
 	start_day = lst["start_day"]
@@ -13,6 +17,7 @@ def simulate(lst):
 	food_cost = lst["food_cost"]
 	facility_cost = lst["facility_cost"]
 	animal_price = lst["animal_price"]
+	extend_days = lst["extend_days"]
 
 	#calculate discount/day from given discount/yr
 	discount = lst["r_value"]/Decimal(365)	
@@ -25,14 +30,17 @@ def simulate(lst):
 	# get min/start size, max/end size and calculate number of sizes
 	start_size = max_sizes[start_day]
 	max_size = max_sizes[end_day]
-	num_sizes = (max_sizes[end_day] - max_sizes[start_day]) / diff + Decimal(1)
+
+	# repeat end size for each extend day
+	for i in range(extend_days):
+		max_sizes[end_day+Decimal(1)+i] = max_size
 
 	# generate the graph with infinity for each value
 	graph = {}
 
 	# from start_day to end_day,
 	#	construct a dict for each day then size
-	for curr_day in range(start_day, end_day+Decimal(1)):
+	for curr_day in range(start_day, end_day+extend_days+Decimal(1)):
 		curr_day = Decimal(curr_day)
 		graph[curr_day] = {}
 		# print curr_day
@@ -50,7 +58,7 @@ def simulate(lst):
 	graph[Decimal(1)][start_size] = Decimal(0)
 
 	# iterate through each day except the last
-	for curr_day in range(start_day, end_day):
+	for curr_day in range(start_day, end_day+extend_days):
 		curr_day = Decimal(curr_day)
 		# print curr_day
 		curr_size = start_size
@@ -116,18 +124,24 @@ def simulate(lst):
 			# increment for next size iteration
 			curr_size += diff
 
-	# print ("day, size, revenue, total_cost, kg_food, profit")
 	print ("day, size, kg_food, feeding_cost, profit")
-	for k,v in graph[end_day].items():
-		revenue = get_revenue(start_day, discount, animal_price, end_day, k)
+	for k,v in graph[end_day+extend_days].items():
+		revenue = get_revenue(start_day, discount, animal_price, end_day+extend_days, k)
 		total_cost = food_cost * v
 		rent_cost = 0 # facility_cost * (end_day - start_day)
 		profit = revenue - total_cost - rent_cost
-		print ("%d, %f, %f, %f, %f" % (end_day, k, v, total_cost, profit))
+		if (extend_days > Decimal(0)):
+			Pa = animal_price
+			Pl = animal_price
+			oc = opportunity_cost(Pa, max_size, end_day-start_day+Decimal(1),
+				Pl, k, end_day+extend_days, discount)
+			profit -= oc
+		print ("%d, %f, %f, %f, %f" % (end_day+extend_days, k, v, total_cost, profit))
+
 	return graph
 
 # by default, set end_day to 80
-def main(end_day=5):
+def main(end_day=5, extend_days=3):
 	lst = {
 		"start_day": Decimal(1),
 		"end_day": end_day,
@@ -135,7 +149,8 @@ def main(end_day=5):
 		"food_cost":Decimal(0.25),
 		"facility_cost":Decimal(0.35),
 		"r_value":Decimal(0.075),
-		"diff": Decimal(0.1)
+		"diff": Decimal(0.1),
+		"extend_days": Decimal(extend_days)
 	}
 	return simulate(lst)
 
