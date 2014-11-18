@@ -13,14 +13,20 @@ def drawSurface(graph):
 	Y = []
 	Z = []
 
-	# create points for each day/size/cost in graph
-	for i in range(len(graph)):
-		ith = graph[i]
-		for j in range(len(ith)):
-			jth = ith[j]
-			X.append(float(jth.day))
-			Y.append(float(jth.size))
-			Z.append(float(ith[j].min_cost))
+	# # create points for each day/size/cost in graph
+	# for i in range(len(graph)):
+	# 	ith = graph[i]
+	# 	for j in range(len(ith)):
+	# 		jth = ith[j]
+	# 		X.append(float(jth.day))
+	# 		Y.append(float(jth.size))
+	# 		Z.append(float(ith[j].min_cost))
+
+	for day,sizes in graph.items():
+		for size,node in sizes.items():
+			X.append(day)
+			Y.append(size)
+			Z.append(node.min_cost)
 
 	pts = mlab.points3d(X, Y, Z, Z)
 
@@ -30,10 +36,11 @@ def drawSurface(graph):
 	mlab.show()
 
 if __name__ == "__main__":
-	if (len(sys.argv) == 2):
-		g = main(int(sys.argv[1]))
-	elif (len(sys.argv) >= 3):
+	if (len(sys.argv) == 3):
 		g = main(int(sys.argv[1]), int(sys.argv[2]))
+	elif (len(sys.argv) >= 4):
+		g = main(int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]))
 	else:
 		g = main()
+
 	drawSurface(g)

@@ -134,7 +134,8 @@ def simulate(lst):
 		max_sizes[end_day+1+i] = max_size
 
 	# init the graph structure with the initial day's mincost set to zero
-	graph = [ [Node(start_day, start_size, 0.)] ]
+	# graph = [ [Node(start_day, start_size, 0.)] ]
+	graph = { start_day : { start_size : Node(start_day, start_size, 0.) } }
 
 	# iterate through each day except the last
 	for curr_day in range(start_day, end_day+extend_days):
@@ -149,12 +150,15 @@ def simulate(lst):
 		num_sizes = get_num_sizes(next_end_size, start_size, diff)
 
 		# create empty column for the next day which will be replaced with min costs		
-		graph.append( [Node(curr_day+1, get_y_inv(i, start_size, diff)) for i in range(num_sizes)] )
+		# graph.append( [Node(curr_day+1, get_y_inv(i, start_size, diff)) for i in range(num_sizes)] )
+		graph[curr_day+1] = { get_y_inv(i, start_size, diff) : Node(curr_day+1, get_y_inv(i, start_size, diff)) for i in range(num_sizes)}
 		
 		# cache the column lookups for this day and the next
-		curr_x = get_x(curr_day, start_day)
-		curr_day_min_costs = graph[curr_x]
-		next_day_min_costs = graph[curr_x+1]
+		# curr_x = get_x(curr_day, start_day)
+		# curr_day_min_costs = graph[curr_x]
+		curr_day_min_costs = graph[curr_day]
+		next_day_min_costs = graph[curr_day+1]
+		# next_day_min_costs = graph[curr_x+1]
 
 		# cache the current day facility and food costs
 		curr_facility_cost = 0 # facility_costs[curr_day]
@@ -166,7 +170,8 @@ def simulate(lst):
 
 			# get the precalculated min cost to this size on this day
 			curr_y = get_y(curr_size, start_size, diff)
-			curr_node = curr_day_min_costs[curr_y]
+			# curr_node = curr_day_min_costs[curr_y]
+			curr_node = curr_day_min_costs[curr_size]
 			curr_cost = curr_node.min_cost + curr_facility_cost
 
 			# get the first day s.t. its max size is >= the current size
@@ -210,7 +215,8 @@ def simulate(lst):
 			
 				# get the next size's current min cost
 				next_y = get_y(curr_next_size, start_size, diff)
-				next_node = next_day_min_costs[next_y]
+				# next_node = next_day_min_costs[next_y]
+				next_node = next_day_min_costs[curr_next_size]
 				next_cost = next_node.min_cost
 
 				# if this cost is less than the current min, swap vals
@@ -224,6 +230,7 @@ def simulate(lst):
 				curr_next_rate += slope
 				curr_next_cost += cost_step
 				curr_next_size += diff
+				curr_next_size = round(curr_next_size, 1)
 
 			# increment for next size iteration
 			curr_size += diff
@@ -232,13 +239,12 @@ def simulate(lst):
 	print ("day, size, kg_food, feeding_cost, profit, day_cost, prev_node_size")
 
 	# cache the last column in the graph, i.e. the column of nodes on the final day
-	final_day_column = graph[-1]
+	final_day_column = graph[end_day+extend_days]
+	final_day_column = collections.OrderedDict(sorted(final_day_column.items()))
 
 	# iterate over each element
-	for i in range(len(final_day_column)):
-		# cache current node	
-		curr_node = final_day_column[i]
-
+	for curr_size, curr_node in final_day_column.items():
+		
 		# calculate profit based on revenue and total expenses
 		revenue = get_revenue(start_day, discount, prices_per_kg[curr_node.size], curr_node.day, curr_node.size)
 		rent_cost = 0 # calculate_facility_costs(lst)
