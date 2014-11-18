@@ -40,14 +40,13 @@ def feeding_rate(day_diff, size):
     Q = a * expo + c;
     return Q
     
-    
 def opportunity_cost(Pa, Sa, Ta, Pl, Sl, Tl, discount):
     profit = Pa * Sa
     N = 30
     part1 = 1/(math.exp(discount*Ta)-1)
-    part1 -= math.exp(-1*(N+1)*discount*Ta) / (1 - math.exp(-1*discount*Ta))
-    part2 = 1/(math.exp(discount*Tl)-1)
-    part2 -= math.exp(-1*(N+1)*discount*Tl) / (1 - math.exp(-1*discount*Tl))
+    part1 = part1 - math.exp(-1*(N+1)*discount*Ta)/(1-math.exp(-1*discount*Ta))
+    part2 = (1/(math.exp(discount*Tl)-1))
+    part2 = part2 - math.exp(-1*(N+1)*discount*Tl)/(1-math.exp(-1*discount*Tl))
     dis = profit * (part1-part2)
     return dis
     
@@ -80,8 +79,17 @@ def build_max_size_array(start_day, end_day):
     
     for today in range(start_day, end_day + 1):
         max_size_array[today] = max_size_by_day(today)
-    max_size_array = collections.OrderedDict(sorted(max_size_array.items()))
+    # max_size_array = collections.OrderedDict(sorted(max_size_array.items()))
     return max_size_array
+
+def build_const_food_cost_array(start_day, end_day, food_cost):
+    return {i : food_cost for i in range(start_day, end_day+1)}
+
+def build_const_facility_cost_array(start_day, end_day, facility_cost):
+    return {i : facility_cost for i in range(start_day, end_day+1)}
+
+def build_const_prices_per_kg_array(start_size, num_sizes, price_per_kg):
+    return {round(start_size + i*0.1, 1) : price_per_kg for i in range(num_sizes+1)}
     
 ##need to check the correctness of the logic
 def day_by_size_max_feeding(size,max_size_array):
