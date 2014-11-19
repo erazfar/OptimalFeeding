@@ -196,13 +196,10 @@ def simulate(lst):
 				curr_min_size = curr_size
 
 				# count the number of possible sizes
-				num_next_sizes = get_num_sizes(curr_max_size, curr_size, diff) # int(round((curr_max_size - curr_size)/ diff))
-
-				# count the days between current and the max size day
-				day_diff = curr_day - max_size_day
+				num_next_sizes = get_num_sizes(curr_max_size, curr_size, diff)
 
 				# calculate the minimum feeding cost based on the day diff
-				curr_min_rate = feeding_rate(day_diff, curr_size)
+				curr_min_rate = feeding_rate(curr_node.days_const, curr_size)
 
 				# calculate the max feeding rate based on current size
 				curr_max_rate = max_feeding_rate(curr_size)
