@@ -86,17 +86,18 @@ def calculate_facility_costs(lst):
 	return total_cost
 
 class Node(object):
-	def __init__(self, day, size, min_cost=float("inf")):
+	def __init__(self, day, size, min_cost=float("inf"), days_const=0):
 		self.day = day
 		self.size = size		
 		self.min_cost = min_cost
 		self.min_food = 0.
 		self.min_edge = 0.
+		self.days_const = days_const
 		self.prev_node = None
 
 def simulate(lst):
 	# unbox lst struct
-	start_day = lst["start_day"]
+	start_day = (lst["start_day"])
 	end_day = lst["end_day"]	
 	food_costs = lst["food_costs"]	
 	facility_costs = lst["facility_costs"]
@@ -105,11 +106,11 @@ def simulate(lst):
 
 	# if the given food costs is a single value, create a dict for every day
 	if not isinstance(food_costs, list):
-		food_costs = build_const_food_cost_array(start_day, end_day, food_costs)
+		food_costs = build_const_food_cost_array(start_day, end_day+extend_days, food_costs)
 
 	# if the given facility costs is a single value, create a dict for every day
 	if not isinstance(facility_costs, list):
-		facility_costs = build_const_facility_cost_array(start_day, end_day, facility_costs)
+		facility_costs = build_const_facility_cost_array(start_day, end_day+extend_days, facility_costs)
 
 	# diff represents the step between each size considered
 	diff = 0.1
@@ -119,6 +120,9 @@ def simulate(lst):
 
 	# generate lookup tables for max size at each day
 	max_sizes = build_max_size_array(start_day, end_day)
+
+	size_by_size_lookup = build_size_by_size_lookup(start_day, end_day, max_sizes)
+	day_by_size_lookup = build_day_by_size_lookup(start_day, end_day, max_sizes)
 
 	# get min/start size, max/end size and calculate number of sizes
 	start_size = max_sizes[start_day]
@@ -134,132 +138,142 @@ def simulate(lst):
 		max_sizes[end_day+1+i] = max_size
 
 	# init the graph structure with the initial day's mincost set to zero
-	# graph = [ [Node(start_day, start_size, 0.)] ]
-	graph = { start_day : { start_size : Node(start_day, start_size, 0.) } }
+	graph = { start_day : { start_size : { 0 : Node(start_day, start_size, min_cost=0.) } } }
 
 	# iterate through each day except the last
 	for curr_day in range(start_day, end_day+extend_days):
 
-		curr_day = curr_day
+		next_day = curr_day+1
 		print("Calculating costs for day: %d" % (curr_day))
 
 		# calculate number of reachable sizes
 		curr_size = start_size
 		end_size = max_sizes[curr_day]
-		next_end_size = max_sizes[curr_day+1]
+		next_end_size = max_sizes[next_day]
 		num_sizes = get_num_sizes(next_end_size, start_size, diff)
 
-		# create empty column for the next day which will be replaced with min costs		
-		# graph.append( [Node(curr_day+1, get_y_inv(i, start_size, diff)) for i in range(num_sizes)] )
-		graph[curr_day+1] = { get_y_inv(i, start_size, diff) : Node(curr_day+1, get_y_inv(i, start_size, diff)) for i in range(num_sizes)}
+		# create empty column for the next day which will be replaced with min costs				
+		graph[next_day] = {}
+		next_day_min_costs = graph[next_day]
+		
+		curr_size = start_size
+		while curr_size <= next_end_size:
+			next_day_min_costs[curr_size] = {}
+			next_size_min_costs = next_day_min_costs[curr_size]
+			num_days_const = next_day - day_by_size_lookup[curr_size]
+			if (curr_size == start_size):
+				days_const = next_day - start_day
+				next_size_min_costs[days_const] = Node(next_day, curr_size, days_const=days_const)
+			else:
+				for days_const in range(num_days_const+1):
+					next_size_min_costs[days_const] = Node(next_day, curr_size, days_const=days_const)
+
+			curr_size += 0.1
+			curr_size = round(curr_size, 1)
 		
 		# cache the column lookups for this day and the next
-		# curr_x = get_x(curr_day, start_day)
-		# curr_day_min_costs = graph[curr_x]
 		curr_day_min_costs = graph[curr_day]
-		next_day_min_costs = graph[curr_day+1]
-		# next_day_min_costs = graph[curr_x+1]
+		next_day_min_costs = graph[next_day]
 
 		# cache the current day facility and food costs
-		curr_facility_cost = 0 # facility_costs[curr_day]
+		curr_facility_cost = facility_costs[curr_day]
 		curr_food_cost = food_costs[curr_day]
 
 		# from start to max size that day
-		while curr_size <= end_size:
-			curr_size = curr_size
-
-			# get the precalculated min cost to this size on this day
-			curr_y = get_y(curr_size, start_size, diff)
-			# curr_node = curr_day_min_costs[curr_y]
-			curr_node = curr_day_min_costs[curr_size]
-			curr_cost = curr_node.min_cost + curr_facility_cost
-
-			# get the first day s.t. its max size is >= the current size
-			max_size_day = day_by_size_max_feeding(curr_size, max_sizes)
-
-			# get max size and rates based on the first day
-			#	s.t. the max is >= the current size
-			curr_max_size = size_by_size_max_feeding(curr_size, max_sizes)
-			curr_min_size = curr_size
-
-			# count the number of possible sizes
-			num_next_sizes = get_num_sizes(curr_max_size, curr_size, diff) # int(round((curr_max_size - curr_size)/ diff))
-
-			# count the days between current and the max size day
-			day_diff = curr_day - max_size_day
-
-			# calculate the minimum feeding cost based on the day diff
-			curr_min_rate = feeding_rate(day_diff, curr_size)
-
-			# calculate the max feeding rate based on current size
-			curr_max_rate = max_feeding_rate(curr_size)
-
-			# calculate current discount rate
-			curr_discount = discount_factor_value(curr_day - start_day, discount)
-
-			# linearly approximate the feed cost depending on the min and max
-			#	feeding rates
-			if num_next_sizes == 1:
-				cost_step = 0 # never used, just a placeholder
-			else:
-				slope = (curr_max_rate - curr_min_rate) / (num_next_sizes - 1)
-				cost_step = curr_food_cost * slope * curr_discount
+		for curr_size, curr_days_const in curr_day_min_costs.items():
 			
-			# set up next size and current cost (edge weight)
-			curr_next_size = curr_size
-			curr_next_rate = curr_min_rate
-			curr_next_cost = curr_cost + curr_food_cost*curr_min_rate*curr_discount
+			for curr_day_const, curr_node in curr_days_const.items():
 
-			# for every next possible weight
-			for i in range(num_next_sizes):
-			
-				# get the next size's current min cost
-				next_y = get_y(curr_next_size, start_size, diff)
-				# next_node = next_day_min_costs[next_y]
-				next_node = next_day_min_costs[curr_next_size]
-				next_cost = next_node.min_cost
+				# get the precalculated min cost to this size on this day
+				curr_cost = curr_node.min_cost + curr_facility_cost
 
-				# if this cost is less than the current min, swap vals
-				if curr_next_cost < next_cost:
-					next_node.min_cost = curr_next_cost
-					next_node.prev_node = curr_node
-					next_node.min_edge = (curr_next_cost - curr_cost)
-					next_node.min_food = curr_node.min_food + curr_next_rate
+				# get the first day s.t. its max size is >= the current size
+				max_size_day = day_by_size_lookup[curr_size]
 
-				# increment for the next iteration
-				curr_next_rate += slope
-				curr_next_cost += cost_step
-				curr_next_size += diff
-				curr_next_size = round(curr_next_size, 1)
+				# get max size and rates based on the first day
+				#	s.t. the max is >= the current size
+				curr_max_size = size_by_size_lookup[curr_size]
+				curr_min_size = curr_size
 
-			# increment for next size iteration
-			curr_size += diff
-			curr_size = round(curr_size, 1)
+				# count the number of possible sizes
+				num_next_sizes = get_num_sizes(curr_max_size, curr_size, diff) # int(round((curr_max_size - curr_size)/ diff))
+
+				# count the days between current and the max size day
+				day_diff = curr_day - max_size_day
+
+				# calculate the minimum feeding cost based on the day diff
+				curr_min_rate = feeding_rate(day_diff, curr_size)
+
+				# calculate the max feeding rate based on current size
+				curr_max_rate = max_feeding_rate(curr_size)
+
+				# calculate current discount rate
+				curr_discount = discount_factor_value(curr_day - start_day, discount)
+
+				# linearly approximate the feed cost depending on the min and max
+				#	feeding rates
+				if num_next_sizes == 1:
+					cost_step = 0 # never used, just a placeholder
+				else:
+					slope = (curr_max_rate - curr_min_rate) / (num_next_sizes - 1)
+					cost_step = curr_food_cost * slope * curr_discount
+				
+				# set up next size and current cost (edge weight)
+				curr_next_size = curr_size
+				curr_next_rate = curr_min_rate
+				curr_next_cost = curr_cost + curr_food_cost*curr_min_rate*curr_discount
+
+				# for every next possible weight
+				for next_node in range(num_next_sizes):
+					
+					# if the current node is staying the same size,
+					#	point edge to the next number of days constant
+					if curr_size == curr_next_size:
+						next_day_const = curr_day_const + 1
+					else:
+						next_day_const = 0
+					next_node = next_day_min_costs[curr_next_size][next_day_const]
+					next_cost = next_node.min_cost
+
+					# if this cost is less than the current min, swap vals
+					if curr_next_cost < next_cost:
+						next_node.min_cost = curr_next_cost
+						next_node.prev_node = curr_node
+						next_node.min_edge = (curr_next_cost - curr_cost)
+						next_node.min_food = curr_node.min_food + curr_next_rate # *curr_discount
+
+					# increment for the next iteration
+					curr_next_rate += slope
+					curr_next_cost += cost_step
+					curr_next_size += diff
+					curr_next_size = round(curr_next_size, 1)
 
 	print ("day, size, kg_food, feeding_cost, profit, day_cost, prev_node_size")
 
 	# cache the last column in the graph, i.e. the column of nodes on the final day
+	# final_day_column = graph[end_day+extend_days-start_day]
 	final_day_column = graph[end_day+extend_days]
 	final_day_column = collections.OrderedDict(sorted(final_day_column.items()))
 
 	# iterate over each element
-	for curr_size, curr_node in final_day_column.items():
-		
-		# calculate profit based on revenue and total expenses
-		revenue = get_revenue(start_day, discount, prices_per_kg[curr_node.size], curr_node.day, curr_node.size)
-		rent_cost = 0 # calculate_facility_costs(lst)
-		# total_cost = food_costs[start_day] * curr_node.min_cost + rent_cost
-		profit = revenue - curr_node.min_cost
+	for curr_size, curr_days_const in final_day_column.items():
+		for curr_day_const, curr_node in curr_days_const.items():
 
-		# extend_days is greater than zero, calculate and subtract the
-		#	opportunity cost
-		if (extend_days > 0):
-			Pa = prices_per_kg[curr_node.size]
-			Pl = prices_per_kg[curr_node.size]
-			oc = opportunity_cost(Pa, max_size, end_day-start_day+1,
-				Pl, curr_node.size, curr_node.day, discount)
-			profit -= oc
-		print ("%d, %f, %f, %f, %f, %f, %f" % (curr_node.day, curr_node.size, curr_node.min_food, curr_node.min_cost, profit, curr_node.min_edge, curr_node.prev_node.size))
+			# calculate profit based on revenue and total expenses
+			revenue = get_revenue(start_day, discount, prices_per_kg[curr_node.size], curr_node.day, curr_node.size)
+			rent_cost = 0 # calculate_facility_costs(lst)
+			# total_cost = food_costs[start_day] * curr_node.min_cost + rent_cost
+			profit = revenue - curr_node.min_cost
+
+			# extend_days is greater than zero, calculate and subtract the
+			#	opportunity cost
+			if (extend_days > 0):
+				Pa = prices_per_kg[curr_node.size]
+				Pl = prices_per_kg[curr_node.size]
+				oc = opportunity_cost(Pa, max_size, end_day-start_day+1,
+					Pl, curr_node.size, curr_node.day, discount)
+				profit -= oc
+			print ("%d, %d, %f, %f, %f, %f, %f, %f" % (curr_node.day, curr_node.days_const, curr_node.size, curr_node.min_food, curr_node.min_cost, profit, curr_node.min_edge, curr_node.prev_node.size))
 
 	# write_animal_weight_csv(max_sizes[end_day], animal_price, end_day)
 	# write_food_cost_csv(food_cost, start_day, end_day)

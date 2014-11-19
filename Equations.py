@@ -6,12 +6,13 @@ import collections
 ## ad-lib function
 def max_size_by_day(day):
     '''
-    day = Decimal(day);
-    size = Decimal('562.959283') / (Decimal('1.0') + Decimal(math.exp(Decimal('-1') * (day - Decimal('398.095995')) / Decimal('189.503378'))));
+    day = (day);
+    size = ('562.959283') / (('1.0') + (math.exp(('-1') * (day - ('398.095995')) / ('189.503378'))));
     size = size.quantize(ONEPLACES);
     return size;
     '''
 
+    # size = (562.959283) / ((1.0) + (math.exp((-1) * (day - (398.095995)) / (189.503378))));
     size = 343.822718 + 1.8290907 * day
     return round(size, 1)
 
@@ -23,8 +24,8 @@ def max_feeding_rate(size):
     ## getcontext.prec is to set all Decimal variable to total 10 digits.
     '''
     getcontext().prec = 10;
-    size = Decimal(size);
-    Q = Decimal('1.004226945') + Decimal('0.0176380855')*(size); ##check value
+    size = (size);
+    Q = ('1.004226945') + ('0.0176380855')*(size); ##check value
     return Q;
     # '''
 
@@ -79,7 +80,7 @@ def build_max_size_array(start_day, end_day):
     
     for today in range(start_day, end_day + 1):
         max_size_array[today] = max_size_by_day(today)
-    # max_size_array = collections.OrderedDict(sorted(max_size_array.items()))
+    max_size_array = collections.OrderedDict(sorted(max_size_array.items()))
     return max_size_array
 
 def build_const_food_cost_array(start_day, end_day, food_cost):
@@ -91,6 +92,29 @@ def build_const_facility_cost_array(start_day, end_day, facility_cost):
 def build_const_prices_per_kg_array(start_size, num_sizes, price_per_kg):
     return {round(start_size + i*0.1, 1) : price_per_kg for i in range(num_sizes+1)}
     
+
+def build_day_by_size_lookup(start_day, end_day, max_sizes):
+    day_by_size_lookup = {}
+    start_size = max_sizes[start_day]
+    end_size = max_sizes[end_day]
+    curr_size = start_size
+    while curr_size <= end_size:
+        day_by_size_lookup[curr_size] = day_by_size_max_feeding(curr_size, max_sizes)        
+        curr_size += 0.1
+        curr_size = round(curr_size, 1)
+    return day_by_size_lookup
+
+def build_size_by_size_lookup(start_day, end_day, max_sizes):
+    size_by_size_lookup = {}
+    start_size = max_sizes[start_day]
+    end_size = max_sizes[end_day-1]
+    curr_size = start_size
+    while curr_size <= end_size:
+        size_by_size_lookup[curr_size] = size_by_size_max_feeding(curr_size, max_sizes)        
+        curr_size += 0.1
+        curr_size = round(curr_size, 1)
+    return size_by_size_lookup
+
 ##need to check the correctness of the logic
 def day_by_size_max_feeding(size,max_size_array):
     ret = None
@@ -99,8 +123,6 @@ def day_by_size_max_feeding(size,max_size_array):
                ret = today
                break
     return ret
-
-
 
 ##input size and get the size by max feeding
 def size_by_size_max_feeding(size, max_size_array):
