@@ -7,26 +7,6 @@ import math
 import numpy as np
 import csv
 
-# transforms the given day to the x-coordinate of the graph
-def get_x(day, start_day):
-	return day-start_day
-
-# undoes the above transform
-def get_x_inv(x, start_day):
-	return x + start_day
-
-# transforms the given size to the y-coordinate of the graph
-def get_y(size, start_size, diff):
-	return int(round((size - start_size)/diff))
-
-# undoes the above transform
-def get_y_inv(y, start_size, diff):
-	return round(diff*y + start_size, 1)
-
-# returns the # of sizes between the given max and min, both inclusive
-def get_num_sizes(max_size, min_size, diff):
-	return int(round((max_size - min_size)/diff)) + 1
-
 # writes the facility cost per day to a CSV file
 def write_facility_cost_csv(facility_cost, start_day, end_day):
 	file_name = 'facility_cost_output.csv'
@@ -112,9 +92,6 @@ def simulate(lst):
 	if not isinstance(facility_costs, list):
 		facility_costs = build_const_facility_cost_array(start_day, end_day+extend_days, facility_costs)
 
-	# diff represents the step between each size considered
-	diff = 0.1
-
 	#calculate discount/day from given discount/yr
 	discount = lst["r_value"]/365.	
 
@@ -127,7 +104,7 @@ def simulate(lst):
 	# get min/start size, max/end size and calculate number of sizes
 	start_size = max_sizes[start_day]
 	max_size = max_sizes[end_day]
-	total_num_sizes = get_num_sizes(max_size, start_size, diff)
+	total_num_sizes = max_size - start_size + 1
 
 	# if the given prices per kg is a single value, create a dict for every day
 	if not isinstance(prices_per_kg, list):
@@ -150,7 +127,7 @@ def simulate(lst):
 		curr_size = start_size
 		end_size = max_sizes[curr_day]
 		next_end_size = max_sizes[next_day]
-		num_sizes = get_num_sizes(next_end_size, start_size, diff)
+		num_sizes = next_end_size - start_size + 1
 
 		# create empty column for the next day which will be replaced with min costs				
 		graph[next_day] = {}
@@ -168,8 +145,7 @@ def simulate(lst):
 				for days_const in range(num_days_const+1):
 					next_size_min_costs[days_const] = Node(next_day, curr_size, days_const=days_const)
 
-			curr_size += 0.1
-			curr_size = round(curr_size, 1)
+			curr_size += 1
 		
 		# cache the column lookups for this day and the next
 		curr_day_min_costs = graph[curr_day]
@@ -196,13 +172,14 @@ def simulate(lst):
 				curr_min_size = curr_size
 
 				# count the number of possible sizes
-				num_next_sizes = get_num_sizes(curr_max_size, curr_size, diff)
+				# num_next_sizes = get_num_sizes(curr_max_size, curr_size, diff)
+				num_next_sizes = curr_max_size - curr_size + 1
 
 				# calculate the minimum feeding cost based on the day diff
-				curr_min_rate = feeding_rate(curr_node.days_const, curr_size)
+				curr_min_rate = feeding_rate(curr_node.days_const, curr_size/10.)
 
 				# calculate the max feeding rate based on current size
-				curr_max_rate = max_feeding_rate(curr_size)
+				curr_max_rate = max_feeding_rate(curr_size/10.)
 
 				# calculate current discount rate
 				curr_discount = discount_factor_value(curr_day - start_day, discount)
@@ -242,13 +219,11 @@ def simulate(lst):
 					# increment for the next iteration
 					curr_next_rate += slope
 					curr_next_cost += cost_step
-					curr_next_size += diff
-					curr_next_size = round(curr_next_size, 1)
+					curr_next_size += 1
 
 	print ("day, size, kg_food, feeding_cost, profit, day_cost, prev_node_size")
 
 	# cache the last column in the graph, i.e. the column of nodes on the final day
-	# final_day_column = graph[end_day+extend_days-start_day]
 	final_day_column = graph[end_day+extend_days]
 	final_day_column = collections.OrderedDict(sorted(final_day_column.items()))
 
@@ -257,9 +232,7 @@ def simulate(lst):
 		for curr_day_const, curr_node in curr_days_const.items():
 
 			# calculate profit based on revenue and total expenses
-			revenue = get_revenue(start_day, discount, prices_per_kg[curr_node.size], curr_node.day, curr_node.size)
-			rent_cost = 0 # calculate_facility_costs(lst)
-			# total_cost = food_costs[start_day] * curr_node.min_cost + rent_cost
+			revenue = get_revenue(start_day, discount, prices_per_kg[curr_node.size], curr_node.day, curr_node.size/10.)
 			profit = revenue - curr_node.min_cost
 
 			# extend_days is greater than zero, calculate and subtract the
@@ -270,7 +243,7 @@ def simulate(lst):
 				oc = opportunity_cost(Pa, max_size, end_day-start_day+1,
 					Pl, curr_node.size, curr_node.day, discount)
 				profit -= oc
-			print ("%d, %d, %f, %f, %f, %f, %f, %f" % (curr_node.day, curr_node.days_const, curr_node.size, curr_node.min_food, curr_node.min_cost, profit, curr_node.min_edge, curr_node.prev_node.size))
+			print ("%d, %d, %f, %f, %f, %f, %f, %f" % (curr_node.day, curr_node.days_const, curr_node.size/10., curr_node.min_food, curr_node.min_cost, profit, curr_node.min_edge, curr_node.prev_node.size/10.))
 
 	# write_animal_weight_csv(max_sizes[end_day], animal_price, end_day)
 	# write_food_cost_csv(food_cost, start_day, end_day)

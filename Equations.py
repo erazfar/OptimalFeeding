@@ -14,7 +14,7 @@ def max_size_by_day(day):
 
     # size = (562.959283) / ((1.0) + (math.exp((-1) * (day - (398.095995)) / (189.503378))));
     size = 343.822718 + 1.8290907 * day
-    return round(size, 1)
+    return int(round(size*10.))
 
 
 ## max feeding rate function
@@ -90,7 +90,7 @@ def build_const_facility_cost_array(start_day, end_day, facility_cost):
     return {i : facility_cost for i in range(start_day, end_day+1)}
 
 def build_const_prices_per_kg_array(start_size, num_sizes, price_per_kg):
-    return {round(start_size + i*0.1, 1) : price_per_kg for i in range(num_sizes+1)}
+    return { start_size + i : price_per_kg for i in range(num_sizes+1)}
     
 
 def build_day_by_size_lookup(start_day, end_day, max_sizes):
@@ -100,8 +100,7 @@ def build_day_by_size_lookup(start_day, end_day, max_sizes):
     curr_size = start_size
     while curr_size <= end_size:
         day_by_size_lookup[curr_size] = day_by_size_max_feeding(curr_size, max_sizes)        
-        curr_size += 0.1
-        curr_size = round(curr_size, 1)
+        curr_size += 1
     return day_by_size_lookup
 
 def build_size_by_size_lookup(start_day, end_day, max_sizes):
@@ -111,8 +110,7 @@ def build_size_by_size_lookup(start_day, end_day, max_sizes):
     curr_size = start_size
     while curr_size <= end_size:
         size_by_size_lookup[curr_size] = size_by_size_max_feeding(curr_size, max_sizes)        
-        curr_size += 0.1
-        curr_size = round(curr_size, 1)
+        curr_size += 1
     return size_by_size_lookup
 
 ##need to check the correctness of the logic
@@ -131,7 +129,7 @@ def size_by_size_max_feeding(size, max_size_array):
         if (max_size_array[today] >= size):
             ## finding the slope of current day ##
             tempint = (max_size_array[today+1] - max_size_array[today]);
-            ret = round(size + tempint, 1)
+            return size + tempint
             break
     return ret
 
