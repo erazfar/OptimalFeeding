@@ -1,42 +1,35 @@
 import math
 import collections
 
-#from Functions import day_by_size_max_feeding;
+# returns the max rate affected by the compensatory weight gain / feed calculation
+def get_comp_rate(curr_size, next_max_size, ad_lib_size, ad_lib_rate):
+    m = -.807225
+    comp_rate = (m*(float(curr_size)/ad_lib_size - 1) + 1) * (next_max_size - curr_size)/ad_lib_rate
+    return comp_rate
+
+# returns the max rate affected by the compensatory weight gain / feed calculation
+def get_comp_factor(curr_size, next_max_size, ad_lib_size, ad_lib_rate):
+    m = -.807225
+    comp_rate = (float(curr_size)/ad_lib_size - 1)*m + 1
+    return comp_rate
+
 
 ## ad-lib function
 def max_size_by_day(day):
-    '''
-    day = (day);
-    size = ('562.959283') / (('1.0') + (math.exp(('-1') * (day - ('398.095995')) / ('189.503378'))));
-    size = size.quantize(ONEPLACES);
-    return size;
-    '''
-
-    # size = (562.959283) / ((1.0) + (math.exp((-1) * (day - (398.095995)) / (189.503378))));
     size = 343.822718 + 1.8290907 * day
-    return int(round(size*10.))
-
+    return size
 
 ## max feeding rate function
 ## return Decimal variable with 10 digits
-## 10 digits probably not prices enough need to check with the information 
-def max_feeding_rate(size):
-    ## getcontext.prec is to set all Decimal variable to total 10 digits.
-    '''
-    getcontext().prec = 10;
-    size = (size);
-    Q = ('1.004226945') + ('0.0176380855')*(size); ##check value
-    return Q;
-    # '''
-
+def max_feeding_rate(size):    
     Q = 4.33209573 + 0.00562646041 * size
     return Q
 
 ## min feeding rate function    
 def feeding_rate(day_diff, size):
+    day_diff += 1 # TODO: determine if this is correct!
     c = 0.032566835 * pow(size, 0.75);
     a = max_feeding_rate(size) - c;
-    ## CAUTIOUS: NEED TO UPDATE THE day_on_adlib function
     expo = math.exp(-1 * 0.032882286 * day_diff);
     Q = a * expo + c;
     return Q
@@ -71,15 +64,12 @@ def build_facililty_array(cost_array, discount, start_day, end_day):
         else :
             facility_array[today] = today_cost + facility_array[today-1]
     return facility_array
-    
-    ############################DO NOT NEED TO MODIFY##################
-    
 
 def build_max_size_array(start_day, end_day):
     max_size_array = {};
     
     for today in range(start_day, end_day + 1):
-        max_size_array[today] = max_size_by_day(today)
+        max_size_array[today] = int(round(max_size_by_day(today)*10.))
     max_size_array = collections.OrderedDict(sorted(max_size_array.items()))
     return max_size_array
 
