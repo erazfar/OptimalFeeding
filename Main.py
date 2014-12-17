@@ -71,14 +71,14 @@ def main(start_day=1, end_day=80, extend_days=0):
 
 	sim = Simulation(start_day, end_day, extend_days, 0.25, 0.35, 2.89, 0.075)
 	sim.simulate()
-	sim.print_end_costs()
-	return sim.graph
+	return sim
 
 if __name__ == "__main__":
 	
 	if (len(sys.argv) == 3):
-		main(int(sys.argv[1]), int(sys.argv[2]))
+		sim = main(int(sys.argv[1]), int(sys.argv[2]))
 	elif (len(sys.argv) >= 4):
-		main(int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]))
+		sim = main(int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]))
 	else:
-		main()
+		sim = main()
+	sim.print_end_costs()
