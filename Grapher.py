@@ -4,10 +4,14 @@ src: http://stackoverflow.com/questions/12423601
 
 from Main import *
 
+
 import numpy as np
 from mayavi import mlab
+import matplotlib.pyplot as plt
 
-def drawSurface(graph):
+def draw_min_cost_surface(graph):
+
+	graph = sim.graph
 
 	X = []
 	Y = []
@@ -19,10 +23,6 @@ def drawSurface(graph):
 			X.append(day)
 			Y.append(size/10.)
 			Z.append(node.min_cost)
-	
-	for i in range(len(X)):
-		print ("%d,%f,%f" % (X[i], Y[i], Z[i]))
-
 
 	pts = mlab.points3d(X, Y, Z, Z)
 
@@ -39,7 +39,9 @@ def drawSurface(graph):
 	mlab.zlabel("cost")
 	mlab.show()
 
-def drawMinFeedSurface(graph):
+def draw_min_feed_surface(graph):
+
+	graph = sim.graph
 
 	X = []
 	Y = []
@@ -50,11 +52,10 @@ def drawMinFeedSurface(graph):
 			days_const, node = sorted(days_const.items())[-1]
 			X.append(day)
 			Y.append(size/10.)
-			Z.append(node.min_rate)
+			Z.append(node.min_rate*10)
 	
-	for i in range(len(X)):
-		print ("%d,%f,%f" % (X[i], Y[i], Z[i]))
-
+	# for i in range(len(X)):
+	# 	print ("%d,%f,%f" % (X[i], Y[i], Z[i]))
 
 	pts = mlab.points3d(X, Y, Z, Z)
 
@@ -71,13 +72,21 @@ def drawMinFeedSurface(graph):
 	mlab.zlabel("rate")
 	mlab.show()
 
+def plot_optimal_path(sim):
+
+	days,cost = sim.get_optimal_path()
+	fig = plt.figure()
+	plt.scatter(days, cost)
+	plt.show()
 
 if __name__ == "__main__":
 	if (len(sys.argv) == 3):
-		g = main(int(sys.argv[1]), int(sys.argv[2]))
+		sim = main(int(sys.argv[1]), int(sys.argv[2]))
 	elif (len(sys.argv) >= 4):
-		g = main(int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]))
+		sim = main(int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]))
 	else:
-		g = main()
+		sim = main()
 
-	drawMinFeedSurface(g)
+	plot_optimal_path(sim)
+	draw_min_cost_surface(sim)
+	draw_min_feed_surface(sim)
