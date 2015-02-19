@@ -13,7 +13,6 @@ def get_comp_factor(curr_size, next_max_size, ad_lib_size, ad_lib_rate):
     comp_rate = (float(curr_size)/ad_lib_size - 1)*m + 1
     return comp_rate
 
-
 ## ad-lib function
 def max_size_by_day(day):
     size = 343.822718 + 1.8290907 * day
@@ -21,7 +20,7 @@ def max_size_by_day(day):
 
 ## max feeding rate function
 ## return Decimal variable with 10 digits
-def max_feeding_rate(size):    
+def max_feeding_rate(size):
     Q = 4.33209573 + 0.00562646041 * size
     return Q
 
@@ -34,19 +33,17 @@ def feeding_rate(day_diff, size):
     Q = a * expo + c;
     return Q
     
-def opportunity_cost(Pa, Sa, Ta, Pl, Sl, Tl, discount):
-    profit = Pa * Sa
-    N = 30
-    part1 = 1/(math.exp(discount*Ta)-1)
-    part1 = part1 - math.exp(-1*(N+1)*discount*Ta)/(1-math.exp(-1*discount*Ta))
-    part2 = (1/(math.exp(discount*Tl)-1))
-    part2 = part2 - math.exp(-1*(N+1)*discount*Tl)/(1-math.exp(-1*discount*Tl))
-    dis = profit * (part1-part2)
-    return dis
-    
+def opportunity_cost(cycles_per_year, discount, ad_lib_day, limit_day, ad_lib_profit):
+    r = discount
+    N = cycles_per_year
+    Tl = limit_day
+    Ta = ad_lib_day
+    OC = -1 * ad_lib_profit * ( (1/(math.exp(r/365*Ta)-1) - (math.exp(-1*(N/r+1)*r/365*Ta))/(1-math.exp(-1*r/365*Ta)) )
+                            - (1/(math.exp(r/365*Tl)-1) - (math.exp(-1*(N/r+1)*r/365*Tl))/(1-math.exp(-1*r/365*Tl)) ) )
+    return OC
 
 def discount_factor_value(day, discount):
-    value = math.exp(-1. * discount * day)
+    value = math.exp(-1 * discount/365. * day)
     return value
 
 def get_revenue(start_day, discount, sell_price, w_day, w_size):    
@@ -122,7 +119,3 @@ def size_by_size_max_feeding(size, max_size_array):
             return size + tempint
             break
     return ret
-
-
-
-    

@@ -18,15 +18,15 @@ class Node(object):
 		self.prev_node = None
 
 class Simulation(object):
-	def __init__(self, start_day, end_day, extend_days, food_costs, facility_costs, prices_per_kg, r_value):
+	def __init__(self, start_day, end_day, extend_days, food_costs, facility_costs, prices_per_kg, r_value, cycles_per_year):
 		self.start_day = start_day
 		self.end_day = end_day
 		self.extend_days = extend_days
 		self.food_costs = food_costs
 		self.facility_costs = facility_costs
 		self.prices_per_kg = prices_per_kg
-		self.r_value = r_value
-		self.discount = r_value/365.
+		self.discount = r_value
+		self.cycles_per_year = cycles_per_year
 
 	def get_optimal_path(self):
 		graph = self.graph
@@ -60,18 +60,20 @@ class Simulation(object):
 	def simulate(self):
 		# unbox lst struct
 		start_day = self.start_day
-		end_day = self.end_day
+		real_end_day = self.end_day
+		end_day = self.end_day+self.extend_days
 		extend_days = self.extend_days
 		discount = self.discount
+		cycles_per_year = self.cycles_per_year
 
 		# if the given food costs is a single value, create a dict for every day
 		if not isinstance(self.food_costs, list):
-			self.food_costs = build_const_food_cost_array(start_day, end_day+extend_days, self.food_costs)
+			self.food_costs = build_const_food_cost_array(start_day, end_day, self.food_costs)
 		food_costs = self.food_costs
 
 		# if the given facility costs is a single value, create a dict for every day
 		if not isinstance(self.facility_costs, list):
-			self.facility_costs = build_const_facility_cost_array(start_day, end_day+extend_days, self.facility_costs)
+			self.facility_costs = build_const_facility_cost_array(start_day, end_day, self.facility_costs)
 		facility_costs = self.facility_costs
 
 		# generate lookup tables for max size at each day
@@ -89,23 +91,24 @@ class Simulation(object):
 			self.prices_per_kg = build_const_prices_per_kg_array(start_size, total_num_sizes, self.prices_per_kg)
 		prices_per_kg = self.prices_per_kg
 
-		# repeat end size for each extend day
-		for i in range(extend_days):
-			max_sizes[end_day+1+i] = max_size
-
 		# init the graph structure with the initial day's mincost set to zero
 		graph = { start_day : { start_size : { 0 : Node(start_day, start_size, min_cost=0.) } } }
 
 		# iterate through each day except the last
-		for curr_day in range(start_day, end_day+extend_days):
+		for curr_day in range(start_day, end_day):
 
 			next_day = curr_day+1
-			print("Calculating costs for day: %d" % (curr_day))
+			print("Calculating costs for day: %d" % curr_day)
 
 			# calculate number of reachable sizes
 			curr_size = start_size
-			end_size = max_sizes[curr_day]
-			next_end_size = max_sizes[next_day]
+			
+			if curr_day < end_day:
+				end_size = max_sizes[curr_day]
+				next_end_size = max_sizes[next_day]
+			else:
+				end_size = max_sizes[end_day]
+				next_end_size = end_size
 			num_sizes = next_end_size - start_size + 1
 
 			# create empty column for the next day which will be replaced with min costs				
@@ -157,9 +160,7 @@ class Simulation(object):
 					# calculate the max feeding rate based on current size
 					curr_max_rate = max_feeding_rate(curr_size/10.)
 					curr_comp_rate = get_comp_rate(curr_size/10., curr_max_size/10., max_sizes[curr_day]/10., curr_max_rate)
-					temp_max_size = int(round(curr_max_rate*curr_comp_rate*10.))+curr_size
-					if (temp_max_size < max_sizes[curr_day+1]):
-						curr_max_size = temp_max_size
+					curr_max_size = int(round(curr_max_rate*curr_comp_rate*10.))+curr_size
 
 					# count the number of possible sizes
 					# num_next_sizes = get_num_sizes(curr_max_size, curr_size, diff)
@@ -183,6 +184,9 @@ class Simulation(object):
 
 					# for every next possible weight
 					for next_node in range(num_next_sizes):
+
+						if curr_next_size > max_size:
+							continue
 						
 						# if the current node is staying the same size,
 						#	point edge to the next number of days constant
@@ -206,29 +210,48 @@ class Simulation(object):
 						curr_next_size += 1
 
 		# cache the last column in the graph, i.e. the column of nodes on the final day
-		final_day_column = graph[end_day+extend_days]
+		final_day_column = graph[end_day]
 		final_day_column = collections.OrderedDict(sorted(final_day_column.items()))
+		
+		final_size = max_sizes[real_end_day]
+		ad_lib_node = graph[real_end_day][final_size][0]
+		ad_lib_profit = get_revenue(start_day, discount, prices_per_kg[final_size], real_end_day, final_size/10.)
+		print start_day
+		print discount
+		print prices_per_kg[final_size]
+		print real_end_day
+		print final_size/10.
+		print ad_lib_profit
+		print ad_lib_node.min_cost
+		ad_lib_profit -= ad_lib_node.min_cost
 
 		# iterate over each element
 		for curr_size, curr_days_const in final_day_column.items():
+			if curr_size > final_size:
+				break
 			for curr_day_const, curr_node in curr_days_const.items():
 				curr_node.min_rate = feeding_rate(curr_node.days_const, curr_size/10.)
 
-				# calculate profit based on revenue and total expenses
-				revenue = get_revenue(start_day, discount, prices_per_kg[curr_node.size], curr_node.day, curr_node.size/10.)
-				profit = revenue - curr_node.min_cost
+				if (extend_days > 0):					
+					earlier_node = graph[curr_node.day - curr_node.days_const][curr_node.size][0]
+					# oc = opportunity_cost(cycles_per_year, discount, real_end_day - start_day + 1,
+						# earlier_node.day - start_day + 1, ad_lib_profit)
+					revenue = get_revenue(start_day, discount, prices_per_kg[earlier_node.size], earlier_node.day, earlier_node.size/10.)
+					profit = revenue - earlier_node.min_cost
+					curr_node.min_food = earlier_node.min_food
+					curr_node.min_cost = earlier_node.min_cost
+					curr_node.min_edge = earlier_node.min_edge
+					# curr_node.prev_node = earlier_node.prev_node
+					# profit += oc
+				else:	
+					# calculate profit based on revenue and total expenses
+					revenue = get_revenue(start_day, discount, prices_per_kg[curr_node.size], curr_node.day, curr_node.size/10.)
+					profit = revenue - curr_node.min_cost
 
-				# extend_days is greater than zero, calculate and subtract the
-				#	opportunity cost
-				if (extend_days > 0):
-					Pa = prices_per_kg[curr_node.size]
-					Pl = prices_per_kg[curr_node.size]
-					oc = opportunity_cost(Pa, max_size, end_day-start_day+1,
-						Pl, curr_node.size, curr_node.day, discount)
-					profit -= oc
 				curr_node.profit = profit
 
 		self.graph = graph
+		self.final_size = final_size
 		return
 
 	def print_end_costs(self):		
@@ -247,5 +270,8 @@ class Simulation(object):
 
 		# iterate over each element
 		for curr_size, curr_days_const in final_day_column.items():
+			if curr_size > self.final_size:
+				break
 			for curr_day_const, curr_node in curr_days_const.items():
 				print ("%d, %d, %f, %f, %f, %f, %f, %f" % (curr_node.day, curr_node.days_const, curr_node.size/10., curr_node.min_food, curr_node.min_cost, curr_node.profit, curr_node.min_edge, curr_node.prev_node.size/10.))
+				
