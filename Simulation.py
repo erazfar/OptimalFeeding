@@ -268,10 +268,15 @@ class Simulation(object):
 
 		print ("day, days_const, size, kg_food, feeding_cost, profit, day_cost, prev_node_size")
 
+		final_output = []
+
 		# iterate over each element
 		for curr_size, curr_days_const in final_day_column.items():
 			if curr_size > self.final_size:
 				break
 			for curr_day_const, curr_node in curr_days_const.items():
-				print ("%d, %d, %f, %f, %f, %f, %f, %f" % (curr_node.day, curr_node.days_const, curr_node.size/10., curr_node.min_food, curr_node.min_cost, curr_node.profit, curr_node.min_edge, curr_node.prev_node.size/10.))
-				
+				output = ("%d, %d, %f, %f, %f, %f, %f, %f" % (curr_node.day, curr_node.days_const, curr_node.size/10., curr_node.min_food, curr_node.min_cost, curr_node.profit, curr_node.min_edge, curr_node.prev_node.size/10.))
+				final_output.append(output)
+				print output
+
+		return final_output	

@@ -1,7 +1,8 @@
 <!DOCTYPE html>
+<link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
 <html lang="en">
 <body>
-    <h2>Enter the start day and end day for the simulation</h2>
+    <h2>Simulation:</h2>
     <d1>
     <form action="{{url_for('index_post')}}" method="POST">
     	<dt>Start day:
@@ -17,7 +18,9 @@
         <dt>Facility cost:
         <dt><input type="text" name="Facility cost">
         <dt>R value:
-        <dt><input type="text" name="R value"><br><br>
+        <dt><input type="text" name="R value">
+        <dt>Cycles per year:
+        <dt><input type="text" name="Cycles per year"><br><br>
         <input type="submit" name="my-form" value="Send">
     </form>
 	</d1>

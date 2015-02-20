@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+<html lang="en">
+<body>
+    <h2>Simulation output:</h2>
+    {% for line in output %}
+    <p> {{line}}</p>
+    {% endfor %}
+</body>
+</html>

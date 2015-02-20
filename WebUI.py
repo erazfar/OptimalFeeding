@@ -26,9 +26,11 @@ def index_post(name = None):
 		food_cost = int(request.form.get('Food cost', 0.25, type=float))
 		facility_cost = int(request.form.get('Facility cost', 0.35, type=float))
 		r_value = int(request.form.get('R value', 0.075, type=float))
+		cycles_per_year = int(request.form.get('Cycles per year', 1, type=int))
 
-		m.main(start_day, end_day) #change this call to use all parameters
-		return render_template("index.html")
+		final_output = m.main(start_day, end_day, extend_days, price_per_kg, food_cost, facility_cost, r_value) #change this call to use all parameters
+		return render_template("output.html", output = final_output)
+
 
 if __name__ == '__main__':
     app.run(port=5001)
