@@ -71,16 +71,6 @@ def main(start_day=1, end_day=80, extend_days=0, price_per_kg=0.25, food_cost=0.
 
 	sim = Simulation(start_day, end_day, extend_days, price_per_kg, food_cost, facility_cost, r_value, cycles_per_year) #set cycles_per_year to 1
 	sim.simulate()
-	
-	x,y = sim.get_optimal_path()
-	print x
-	print y
-
-	x,y,z = sim.get_surface_points()
-	print x
-	print y
-	print z
-
 	return sim
 
 if __name__ == "__main__":
