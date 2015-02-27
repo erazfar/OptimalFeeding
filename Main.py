@@ -71,9 +71,6 @@ def main(start_day=1, end_day=80, extend_days=0, price_per_kg=0.25, food_cost=0.
 
 	sim = Simulation(start_day, end_day, extend_days, price_per_kg, food_cost, facility_cost, r_value, cycles_per_year) #set cycles_per_year to 1
 	sim.simulate()
-	final_output = sim.print_end_costs()
-	print final_output
-	return final_output
 
 if __name__ == "__main__":
 	
@@ -83,4 +80,3 @@ if __name__ == "__main__":
 		sim = main(int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]))
 	else:
 		sim = main()
-	#sim.print_end_costs()
