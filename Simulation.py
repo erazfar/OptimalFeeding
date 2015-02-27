@@ -17,6 +17,15 @@ class Node(object):
 		self.days_const = days_const
 		self.prev_node = None
 
+	def copy_from(self, node):
+		self.day = node.day
+		self.size = node.size		
+		self.min_cost = node.min_cost
+		self.min_food = node.min_food
+		self.min_edge = node.min_edge
+		self.days_const = node.days_const
+		self.prev_node = node.prev_node
+
 class Simulation(object):
 	def __init__(self, start_day, end_day, extend_days, food_costs, facility_costs, prices_per_kg, r_value, cycles_per_year):
 		self.start_day = start_day
@@ -52,10 +61,27 @@ class Simulation(object):
 		Y = []
 		while curr_node.prev_node != None:
 			X.append(curr_node.day-1)
-			Y.append(curr_node.min_edge)
+			Y.append(curr_node.min_food - curr_node.prev_node.min_food)
 			curr_node = curr_node.prev_node
 
 		return (X,Y)
+
+	def get_surface_points(self):
+		graph = self.graph
+
+		X = []
+		Y = []
+		Z = []
+
+		for day,sizes in graph.items():
+			for size,days_const in sizes.items():
+				days_const, node = sorted(days_const.items())[-1]
+				X.append(day)
+				Y.append(size/10.)
+				Z.append(node.min_rate)
+
+		return (X,Y,Z)
+
 	
 	def simulate(self):
 		# unbox lst struct
@@ -202,7 +228,7 @@ class Simulation(object):
 							next_node.min_cost = curr_next_cost
 							next_node.prev_node = curr_node
 							next_node.min_edge = (curr_next_cost - curr_cost)
-							next_node.min_food = curr_node.min_food + curr_next_rate # *curr_discount
+							next_node.min_food = curr_node.min_food + curr_next_rate
 
 						# increment for the next iteration
 						curr_next_rate += slope
@@ -216,14 +242,10 @@ class Simulation(object):
 		final_size = max_sizes[real_end_day]
 		ad_lib_node = graph[real_end_day][final_size][0]
 		ad_lib_profit = get_revenue(start_day, discount, prices_per_kg[final_size], real_end_day, final_size/10.)
-		print start_day
-		print discount
-		print prices_per_kg[final_size]
-		print real_end_day
-		print final_size/10.
-		print ad_lib_profit
-		print ad_lib_node.min_cost
 		ad_lib_profit -= ad_lib_node.min_cost
+
+		opp_cost = opportunity_cost(cycles_per_year, discount, real_end_day - start_day + 1,
+			end_day - start_day + 1, ad_lib_profit)
 
 		# iterate over each element
 		for curr_size, curr_days_const in final_day_column.items():
@@ -232,22 +254,20 @@ class Simulation(object):
 			for curr_day_const, curr_node in curr_days_const.items():
 				curr_node.min_rate = feeding_rate(curr_node.days_const, curr_size/10.)
 
-				if (extend_days > 0):					
+				if (extend_days > 0 and curr_size == final_size):
 					earlier_node = graph[curr_node.day - curr_node.days_const][curr_node.size][0]
-					# oc = opportunity_cost(cycles_per_year, discount, real_end_day - start_day + 1,
-						# earlier_node.day - start_day + 1, ad_lib_profit)
-					revenue = get_revenue(start_day, discount, prices_per_kg[earlier_node.size], earlier_node.day, earlier_node.size/10.)
-					profit = revenue - earlier_node.min_cost
-					curr_node.min_food = earlier_node.min_food
-					curr_node.min_cost = earlier_node.min_cost
-					curr_node.min_edge = earlier_node.min_edge
-					# curr_node.prev_node = earlier_node.prev_node
-					# profit += oc
-				else:	
-					# calculate profit based on revenue and total expenses
-					revenue = get_revenue(start_day, discount, prices_per_kg[curr_node.size], curr_node.day, curr_node.size/10.)
-					profit = revenue - curr_node.min_cost
+					curr_node.copy_from(earlier_node)
+					curr_node.opp_cost = opportunity_cost(cycles_per_year, discount, real_end_day - start_day + 1,
+						curr_node.day - start_day + 1, ad_lib_profit)
+				else:
+					curr_node.opp_cost = opp_cost
 
+				# calculate profit based on revenue and total expenses
+				revenue = get_revenue(start_day, discount, prices_per_kg[curr_node.size], curr_node.day, curr_node.size/10.)
+				profit = revenue - curr_node.min_cost
+				profit += curr_node.opp_cost
+				
+				curr_node.revenue = revenue
 				curr_node.profit = profit
 
 		self.graph = graph
@@ -266,7 +286,8 @@ class Simulation(object):
 		final_day_column = graph[end_day+extend_days]
 		final_day_column = collections.OrderedDict(sorted(final_day_column.items()))
 
-		print ("day, days_const, size, kg_food, feeding_cost, profit, day_cost, prev_node_size")
+		# print ("day, days_const, size, kg_food, feeding_cost, profit, day_cost, prev_node_size")
+		print ("day, days_const, size, kg_food, min_cost, revenue, opp_cost, profit, prev_size")
 
 		final_output = []
 
@@ -275,8 +296,4 @@ class Simulation(object):
 			if curr_size > self.final_size:
 				break
 			for curr_day_const, curr_node in curr_days_const.items():
-				output = ("%d, %d, %f, %f, %f, %f, %f, %f" % (curr_node.day, curr_node.days_const, curr_node.size/10., curr_node.min_food, curr_node.min_cost, curr_node.profit, curr_node.min_edge, curr_node.prev_node.size/10.))
-				final_output.append(output)
-				print output
-
-		return final_output	
+				print ("%d, %d, %f, %f, %f, %f, %f, %f, %f" % (curr_node.day, curr_node.days_const, curr_node.size/10., curr_node.min_food, curr_node.min_cost, curr_node.revenue, curr_node.opp_cost, curr_node.profit, curr_node.prev_node.size/10.))
