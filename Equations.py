@@ -121,3 +121,11 @@ def size_by_size_max_feeding(size, max_size_array):
             return size + tempint
             break
     return ret
+
+def is_monotonic(array):
+    if len(array) <= 1:
+        return True
+    elif array[0] < array[1]:
+        return is_monotonic(array[1:])
+    else:
+        return False

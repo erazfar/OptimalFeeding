@@ -26,6 +26,10 @@ class Node(object):
 		self.days_const = node.days_const
 		self.prev_node = node.prev_node
 
+	def pp(self):
+		curr_node = self
+		print ("%d, %d, %f, %f, %f, %f, %f, %f, %f" % (curr_node.day, curr_node.days_const, curr_node.size/10., curr_node.min_food, curr_node.min_cost, curr_node.revenue, curr_node.opp_cost, curr_node.profit, curr_node.prev_node.size/10.))
+
 class Simulation(object):
 	def __init__(self, start_day, end_day, extend_days, food_costs, facility_costs, prices_per_kg, r_value, cycles_per_year):
 		self.start_day = start_day
@@ -37,34 +41,43 @@ class Simulation(object):
 		self.discount = r_value
 		self.cycles_per_year = cycles_per_year
 
-	def get_optimal_path(self):
+	def get_feeding_schedule(self, node):
+		curr_node = node.prev_node
+
+		X = []
+		Y = []
+
+		while curr_node != None:
+			X.append(curr_node.day)
+			Y.append(curr_node.min_curr_food)
+			curr_node = curr_node.prev_node
+
+		X.reverse()
+		Y.reverse()
+		return (X,Y)
+
+	def get_optimal_end_node(self):
 		graph = self.graph
-		start_day = self.start_day
 		end_day = self.end_day
 		extend_days = self.extend_days
-		discount = self.discount
-		prices_per_kg = self.prices_per_kg
 
 		# cache the last column in the graph, i.e. the column of nodes on the final day
 		final_day_column = graph[end_day+extend_days]
 
 		max_profit_node = None
-		max_profit = float('inf')
+		max_profit = float('-inf')
 		# iterate over each element
 		for curr_size, curr_days_const in final_day_column.items():
 			for curr_day_const, curr_node in curr_days_const.items():
-				if curr_node.profit < max_profit:
+				if curr_node.profit > max_profit:
 					max_profit_node = curr_node
 					max_profit = curr_node.profit
 
-		X = []
-		Y = []
-		while curr_node.prev_node != None:
-			X.append(curr_node.day-1)
-			Y.append(curr_node.min_food - curr_node.prev_node.min_food)
-			curr_node = curr_node.prev_node
+		return max_profit_node
 
-		return (X,Y)
+	def get_optimal_feeding_schedule(self):
+		optimal_node = self.get_optimal_end_node()
+		return self.get_feeding_schedule(optimal_node)
 
 	def get_surface_points(self):
 		graph = self.graph
@@ -229,6 +242,8 @@ class Simulation(object):
 							next_node.prev_node = curr_node
 							next_node.min_edge = (curr_next_cost - curr_cost)
 							next_node.min_food = curr_node.min_food + curr_next_rate
+							
+							curr_node.min_curr_food = curr_next_rate
 
 						# increment for the next iteration
 						curr_next_rate += slope
