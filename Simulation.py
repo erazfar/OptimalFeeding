@@ -16,6 +16,7 @@ class Node(object):
 		self.min_edge = 0.
 		self.days_const = days_const
 		self.prev_node = None
+		self.min_curr_food = 0.
 
 	def copy_from(self, node):
 		self.day = node.day
@@ -28,10 +29,10 @@ class Node(object):
 
 	def pp(self):
 		curr_node = self
-		print ("%d, %d, %f, %f, %f, %f, %f, %f, %f" % (curr_node.day, curr_node.days_const, curr_node.size/10., curr_node.min_food, curr_node.min_cost, curr_node.revenue, curr_node.opp_cost, curr_node.profit, curr_node.prev_node.size/10.))
+		print ("%d, %d, %f, %f, %f, %f" % (curr_node.day, curr_node.days_const, curr_node.size/10., curr_node.min_curr_food, curr_node.min_food, curr_node.min_cost))
 
 class Simulation(object):
-	def __init__(self, start_day, end_day, extend_days, food_costs, facility_costs, prices_per_kg, r_value, cycles_per_year):
+	def __init__(self, start_day, end_day, extend_days, food_costs=0.25, facility_costs=0.35, prices_per_kg=2.89, r_value=0.0, cycles_per_year=2):
 		self.start_day = start_day
 		self.end_day = end_day
 		self.extend_days = extend_days
@@ -79,6 +80,18 @@ class Simulation(object):
 		optimal_node = self.get_optimal_end_node()
 		return self.get_feeding_schedule(optimal_node)
 
+	def get_optimal_path(self):
+		return get_optimal_feeding_schedule()
+
+	def get_path(self, node):
+		nodes = []
+		curr_node = node
+		while curr_node != None:
+			nodes.append(curr_node)
+			curr_node = curr_node.prev_node
+		nodes.reverse()
+		return nodes
+
 	def get_surface_points(self):
 		graph = self.graph
 
@@ -86,7 +99,7 @@ class Simulation(object):
 		Y = []
 		Z = []
 
-		for day,sizes in graph.items():
+		for day,sizes in graph.items():			
 			for size,days_const in sizes.items():
 				days_const, node = sorted(days_const.items())[-1]
 				X.append(day)
@@ -122,7 +135,7 @@ class Simulation(object):
 
 		# get min/start size, max/end size and calculate number of sizes
 		start_size = max_sizes[start_day]
-		max_size = max_sizes[end_day]
+		max_size = max_sizes[real_end_day]
 		total_num_sizes = max_size - start_size + 1
 
 		# if the given prices per kg is a single value, create a dict for every day
@@ -142,11 +155,12 @@ class Simulation(object):
 			# calculate number of reachable sizes
 			curr_size = start_size
 			
-			if curr_day < end_day:
+			## TODO Fix this
+			if curr_day < real_end_day:
 				end_size = max_sizes[curr_day]
 				next_end_size = max_sizes[next_day]
 			else:
-				end_size = max_sizes[end_day]
+				end_size = max_sizes[real_end_day]
 				next_end_size = end_size
 			num_sizes = next_end_size - start_size + 1
 
@@ -194,6 +208,8 @@ class Simulation(object):
 
 					# calculate the minimum feeding cost based on the day diff
 					curr_min_rate = feeding_rate(curr_node.days_const, curr_size/10.)
+					if curr_day == 1:
+						print curr_min_rate
 					curr_node.min_rate = curr_min_rate
 
 					# calculate the max feeding rate based on current size
@@ -241,9 +257,8 @@ class Simulation(object):
 							next_node.min_cost = curr_next_cost
 							next_node.prev_node = curr_node
 							next_node.min_edge = (curr_next_cost - curr_cost)
-							next_node.min_food = curr_node.min_food + curr_next_rate
-							
-							curr_node.min_curr_food = curr_next_rate
+							next_node.min_food = curr_node.min_food + curr_next_rate							
+							next_node.min_curr_food = curr_next_rate
 
 						# increment for the next iteration
 						curr_next_rate += slope
@@ -288,6 +303,10 @@ class Simulation(object):
 		self.graph = graph
 		self.final_size = final_size
 		return
+
+	def print_nodes(self, array):
+		for n in array:
+			n.pp()
 
 	def print_end_costs(self):		
 		graph = self.graph
