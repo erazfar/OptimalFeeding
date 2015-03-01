@@ -32,7 +32,7 @@ class Node(object):
 		print ("%d, %d, %f, %f, %f, %f" % (curr_node.day, curr_node.days_const, curr_node.size/10., curr_node.min_curr_food, curr_node.min_food, curr_node.min_cost))
 
 class Simulation(object):
-	def __init__(self, start_day, end_day, extend_days, food_costs=0.25, facility_costs=0.35, prices_per_kg=2.89, r_value=0.0, cycles_per_year=2, restriction=0.0):
+	def __init__(self, start_day, end_day, extend_days, food_costs=0.25, facility_costs=0.35, prices_per_kg=2.89, r_value=0.075, cycles_per_year=2, restriction=0.0):
 		self.start_day = start_day
 		self.end_day = end_day
 		self.extend_days = extend_days
@@ -42,6 +42,9 @@ class Simulation(object):
 		self.discount = r_value
 		self.cycles_per_year = cycles_per_year
 		self.restriction = restriction
+
+	def ad_lib_node(self):
+		self.start_day = start_day
 
 	def get_feeding_schedule(self, node):
 		curr_node = node.prev_node
@@ -156,7 +159,7 @@ class Simulation(object):
 
 			# calculate number of reachable sizes
 			curr_size = start_size
-			
+
 			# create empty column for the next day which will be replaced with min costs				
 			graph[next_day] = {}
 			next_day_min_costs = graph[next_day]
@@ -261,9 +264,10 @@ class Simulation(object):
 		final_day_column = collections.OrderedDict(sorted(final_day_column.items()))
 		
 		final_size = max_sizes[real_end_day]
-		ad_lib_node = graph[real_end_day][final_size][0]
-		ad_lib_profit = get_revenue(start_day, discount, prices_per_kg[final_size], real_end_day, final_size/10.)
-		ad_lib_profit -= ad_lib_node.min_cost
+		# ad_lib_node = graph[real_end_day][final_size][0]
+		# ad_lib_profit = get_revenue(start_day, discount, prices_per_kg[final_size], real_end_day, final_size/10.)
+		# ad_lib_profit -= ad_lib_node.min_cost
+		ad_lib_profit = 0.
 
 		opp_cost = opportunity_cost(cycles_per_year, discount, real_end_day - start_day + 1,
 			end_day - start_day + 1, ad_lib_profit)
