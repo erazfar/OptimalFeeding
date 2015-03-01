@@ -32,7 +32,7 @@ class Node(object):
 		print ("%d, %d, %f, %f, %f, %f" % (curr_node.day, curr_node.days_const, curr_node.size/10., curr_node.min_curr_food, curr_node.min_food, curr_node.min_cost))
 
 class Simulation(object):
-	def __init__(self, start_day, end_day, extend_days, food_costs=0.25, facility_costs=0.35, prices_per_kg=2.89, r_value=0.0, cycles_per_year=2):
+	def __init__(self, start_day, end_day, extend_days, food_costs=0.25, facility_costs=0.35, prices_per_kg=2.89, r_value=0.0, cycles_per_year=2, restriction=0.0):
 		self.start_day = start_day
 		self.end_day = end_day
 		self.extend_days = extend_days
@@ -41,6 +41,7 @@ class Simulation(object):
 		self.prices_per_kg = prices_per_kg
 		self.discount = r_value
 		self.cycles_per_year = cycles_per_year
+		self.restriction = restriction
 
 	def get_feeding_schedule(self, node):
 		curr_node = node.prev_node
@@ -117,6 +118,7 @@ class Simulation(object):
 		extend_days = self.extend_days
 		discount = self.discount
 		cycles_per_year = self.cycles_per_year
+		restriction = 1. - self.restriction
 
 		# if the given food costs is a single value, create a dict for every day
 		if not isinstance(self.food_costs, list):
@@ -135,8 +137,8 @@ class Simulation(object):
 
 		# get min/start size, max/end size and calculate number of sizes
 		start_size = max_sizes[start_day]
-		max_size = max_sizes[real_end_day]
-		total_num_sizes = max_size - start_size + 1
+		end_size = max_sizes[real_end_day]
+		total_num_sizes = end_size - start_size + 1
 
 		# if the given prices per kg is a single value, create a dict for every day
 		if not isinstance(self.prices_per_kg, list):
@@ -155,32 +157,9 @@ class Simulation(object):
 			# calculate number of reachable sizes
 			curr_size = start_size
 			
-			## TODO Fix this
-			if curr_day < real_end_day:
-				end_size = max_sizes[curr_day]
-				next_end_size = max_sizes[next_day]
-			else:
-				end_size = max_sizes[real_end_day]
-				next_end_size = end_size
-			num_sizes = next_end_size - start_size + 1
-
 			# create empty column for the next day which will be replaced with min costs				
 			graph[next_day] = {}
 			next_day_min_costs = graph[next_day]
-			
-			curr_size = start_size
-			while curr_size <= next_end_size:
-				next_day_min_costs[curr_size] = {}
-				next_size_min_costs = next_day_min_costs[curr_size]
-				num_days_const = next_day - day_by_size_lookup[curr_size]
-				if (curr_size == start_size):
-					days_const = next_day - start_day
-					next_size_min_costs[days_const] = Node(next_day, curr_size, days_const=days_const)
-				else:
-					for days_const in range(num_days_const+1):
-						next_size_min_costs[days_const] = Node(next_day, curr_size, days_const=days_const)
-
-				curr_size += 1
 			
 			# cache the column lookups for this day and the next
 			curr_day_min_costs = graph[curr_day]
@@ -231,6 +210,11 @@ class Simulation(object):
 					else:
 						slope = (curr_max_rate - curr_min_rate) / (num_next_sizes - 1)
 						cost_step = curr_food_cost * slope * curr_discount
+
+					if curr_day < real_end_day:
+						num_next_sizes = int(round((size_by_size_lookup[curr_size] - curr_size)*restriction)) + 1
+					elif curr_max_size > end_size:
+						num_next_sizes = (end_size - curr_size) + 1
 					
 					# set up next size and current cost (edge weight)
 					curr_next_size = curr_size
@@ -240,8 +224,8 @@ class Simulation(object):
 					# for every next possible weight
 					for next_node in range(num_next_sizes):
 
-						if curr_next_size > max_size:
-							continue
+						if curr_next_size > end_size:
+							break
 						
 						# if the current node is staying the same size,
 						#	point edge to the next number of days constant
@@ -249,6 +233,13 @@ class Simulation(object):
 							next_day_const = curr_day_const + 1
 						else:
 							next_day_const = 0
+
+						if curr_next_size not in next_day_min_costs:
+							next_day_min_costs[curr_next_size] = {}
+
+						if next_day_const not in next_day_min_costs[curr_next_size]:
+							next_day_min_costs[curr_next_size][next_day_const] = Node(next_day, curr_next_size, days_const=next_day_const)
+
 						next_node = next_day_min_costs[curr_next_size][next_day_const]
 						next_cost = next_node.min_cost
 
@@ -279,8 +270,7 @@ class Simulation(object):
 
 		# iterate over each element
 		for curr_size, curr_days_const in final_day_column.items():
-			if curr_size > final_size:
-				break
+
 			for curr_day_const, curr_node in curr_days_const.items():
 				curr_node.min_rate = feeding_rate(curr_node.days_const, curr_size/10.)
 
@@ -320,14 +310,12 @@ class Simulation(object):
 		final_day_column = graph[end_day+extend_days]
 		final_day_column = collections.OrderedDict(sorted(final_day_column.items()))
 
-		# print ("day, days_const, size, kg_food, feeding_cost, profit, day_cost, prev_node_size")
 		print ("day, days_const, size, kg_food, min_cost, revenue, opp_cost, profit, prev_size")
 
 		final_output = []
 
 		# iterate over each element
 		for curr_size, curr_days_const in final_day_column.items():
-			if curr_size > self.final_size:
-				break
+
 			for curr_day_const, curr_node in curr_days_const.items():
 				print ("%d, %d, %f, %f, %f, %f, %f, %f, %f" % (curr_node.day, curr_node.days_const, curr_node.size/10., curr_node.min_food, curr_node.min_cost, curr_node.revenue, curr_node.opp_cost, curr_node.profit, curr_node.prev_node.size/10.))
