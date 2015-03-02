@@ -1,6 +1,6 @@
 import sqlite3
 from flask import *
-import Main as m
+import Simulation as sim
 
 # Database config
 
@@ -28,8 +28,17 @@ def index_post(name = None):
 		r_value = int(request.form.get('R value', 0.075, type=float))
 		cycles_per_year = int(request.form.get('Cycles per year', 1, type=int))
 
-		final_output = m.main(start_day, end_day, extend_days, price_per_kg, food_cost, facility_cost, r_value) #change this call to use all parameters
-		return render_template("output.html", output = final_output)
+		
+		s = sim.Simulation(start_day, end_day, extend_days, food_cost, facility_cost, price_per_kg, r_value*1.0, cycles_per_year)
+		s.simulate()
+		arrays = s.get_surface_points()
+		X = arrays[0]
+		Y = arrays[1]
+		Z = arrays[2]
+
+		#final_output = sim.(start_day, end_day, extend_days, price_per_kg, food_cost, facility_cost, r_value) #change this call to use all parameters
+		return render_template("output.html", xvals = X, yvals = Y, zvals = Z)
+		#return render_template("output.html")
 
 
 if __name__ == '__main__':

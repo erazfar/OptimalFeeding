@@ -19,7 +19,6 @@ def max_size_by_day(day):
     return size
 
 ## max feeding rate function
-## return Decimal variable with 10 digits
 def max_feeding_rate(size):
     Q = 4.33209573 + 0.00562646041 * size
     return Q
@@ -35,6 +34,9 @@ def feeding_rate(day_diff, size):
     
 def opportunity_cost(cycles_per_year, discount, ad_lib_day, limit_day, ad_lib_profit):
     r = discount
+    if r == 0:
+        return 0
+
     N = cycles_per_year
     Tl = limit_day
     Ta = ad_lib_day
@@ -42,13 +44,13 @@ def opportunity_cost(cycles_per_year, discount, ad_lib_day, limit_day, ad_lib_pr
                             - (1/(math.exp(r/365*Tl)-1) - (math.exp(-1*(N/r+1)*r/365*Tl))/(1-math.exp(-1*r/365*Tl)) ) )
     return OC
 
-def discount_factor_value(day, discount):
-    value = math.exp(-1 * discount/365. * day)
+def discount_factor_value(days, discount):
+    value = math.exp(-1 * discount/365. * days)
     return value
 
 def get_revenue(start_day, discount, sell_price, w_day, w_size):    
-    day_diff = (w_day) - start_day;
-    gain = sell_price * (w_size) * discount_factor_value(w_day, discount)
+    day_diff = w_day - start_day;
+    gain = sell_price * w_size * discount_factor_value(day_diff, discount)
     return gain
     
 def build_facililty_array(cost_array, discount, start_day, end_day):
@@ -119,3 +121,11 @@ def size_by_size_max_feeding(size, max_size_array):
             return size + tempint
             break
     return ret
+
+def is_monotonic(array):
+    if len(array) <= 1:
+        return True
+    elif array[0] < array[1]:
+        return is_monotonic(array[1:])
+    else:
+        return False

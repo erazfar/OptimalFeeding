@@ -16,6 +16,7 @@ class Node(object):
 		self.min_edge = 0.
 		self.days_const = days_const
 		self.prev_node = None
+		self.min_curr_food = 0.
 
 	def copy_from(self, node):
 		self.day = node.day
@@ -26,8 +27,12 @@ class Node(object):
 		self.days_const = node.days_const
 		self.prev_node = node.prev_node
 
+	def pp(self):
+		curr_node = self
+		print ("%d, %d, %f, %f, %f, %f" % (curr_node.day, curr_node.days_const, curr_node.size/10., curr_node.min_curr_food, curr_node.min_food, curr_node.min_cost))
+
 class Simulation(object):
-	def __init__(self, start_day, end_day, extend_days, food_costs, facility_costs, prices_per_kg, r_value, cycles_per_year):
+	def __init__(self, start_day, end_day, extend_days, food_costs=0.25, facility_costs=0.35, prices_per_kg=2.89, r_value=0.075, cycles_per_year=2, restriction=0.10):
 		self.start_day = start_day
 		self.end_day = end_day
 		self.extend_days = extend_days
@@ -36,35 +41,60 @@ class Simulation(object):
 		self.prices_per_kg = prices_per_kg
 		self.discount = r_value
 		self.cycles_per_year = cycles_per_year
+		self.restriction = restriction
 
-	def get_optimal_path(self):
+	def ad_lib_node(self):
+		self.start_day = start_day
+
+	def get_feeding_schedule(self, node):
+		curr_node = node
+
+		X = []
+		Y = []
+
+		while curr_node.prev_node != None:
+			X.append(curr_node.day-1)
+			Y.append(curr_node.min_curr_food)
+			curr_node = curr_node.prev_node
+
+		X.reverse()
+		Y.reverse()
+		return (X,Y)
+
+	def get_optimal_end_node(self):
 		graph = self.graph
-		start_day = self.start_day
 		end_day = self.end_day
 		extend_days = self.extend_days
-		discount = self.discount
-		prices_per_kg = self.prices_per_kg
 
 		# cache the last column in the graph, i.e. the column of nodes on the final day
 		final_day_column = graph[end_day+extend_days]
 
 		max_profit_node = None
-		max_profit = float('inf')
+		max_profit = float('-inf')
 		# iterate over each element
 		for curr_size, curr_days_const in final_day_column.items():
 			for curr_day_const, curr_node in curr_days_const.items():
-				if curr_node.profit < max_profit:
+				if curr_node.profit > max_profit:
 					max_profit_node = curr_node
 					max_profit = curr_node.profit
 
-		X = []
-		Y = []
-		while curr_node.prev_node != None:
-			X.append(curr_node.day-1)
-			Y.append(curr_node.min_food - curr_node.prev_node.min_food)
-			curr_node = curr_node.prev_node
+		return max_profit_node
 
-		return (X,Y)
+	def get_optimal_feeding_schedule(self):
+		optimal_node = self.get_optimal_end_node()
+		return self.get_feeding_schedule(optimal_node)
+
+	def get_optimal_path(self):
+		return self.get_optimal_feeding_schedule()
+
+	def get_path(self, node):
+		nodes = []
+		curr_node = node
+		while curr_node != None:
+			nodes.append(curr_node)
+			curr_node = curr_node.prev_node
+		nodes.reverse()
+		return nodes
 
 	def get_surface_points(self):
 		graph = self.graph
@@ -73,7 +103,7 @@ class Simulation(object):
 		Y = []
 		Z = []
 
-		for day,sizes in graph.items():
+		for day,sizes in graph.items():			
 			for size,days_const in sizes.items():
 				days_const, node = sorted(days_const.items())[-1]
 				X.append(day)
@@ -91,14 +121,15 @@ class Simulation(object):
 		extend_days = self.extend_days
 		discount = self.discount
 		cycles_per_year = self.cycles_per_year
+		restriction = 1. - self.restriction
 
 		# if the given food costs is a single value, create a dict for every day
-		if not isinstance(self.food_costs, list):
+		if not isinstance(self.food_costs, dict):
 			self.food_costs = build_const_food_cost_array(start_day, end_day, self.food_costs)
 		food_costs = self.food_costs
 
 		# if the given facility costs is a single value, create a dict for every day
-		if not isinstance(self.facility_costs, list):
+		if not isinstance(self.facility_costs, dict):
 			self.facility_costs = build_const_facility_cost_array(start_day, end_day, self.facility_costs)
 		facility_costs = self.facility_costs
 
@@ -109,11 +140,11 @@ class Simulation(object):
 
 		# get min/start size, max/end size and calculate number of sizes
 		start_size = max_sizes[start_day]
-		max_size = max_sizes[end_day]
-		total_num_sizes = max_size - start_size + 1
+		end_size = max_sizes[real_end_day]
+		total_num_sizes = end_size - start_size + 1
 
 		# if the given prices per kg is a single value, create a dict for every day
-		if not isinstance(self.prices_per_kg, list):
+		if not isinstance(self.prices_per_kg, dict):
 			self.prices_per_kg = build_const_prices_per_kg_array(start_size, total_num_sizes, self.prices_per_kg)
 		prices_per_kg = self.prices_per_kg
 
@@ -124,36 +155,13 @@ class Simulation(object):
 		for curr_day in range(start_day, end_day):
 
 			next_day = curr_day+1
-			print("Calculating costs for day: %d" % curr_day)
 
 			# calculate number of reachable sizes
 			curr_size = start_size
-			
-			if curr_day < end_day:
-				end_size = max_sizes[curr_day]
-				next_end_size = max_sizes[next_day]
-			else:
-				end_size = max_sizes[end_day]
-				next_end_size = end_size
-			num_sizes = next_end_size - start_size + 1
 
 			# create empty column for the next day which will be replaced with min costs				
 			graph[next_day] = {}
 			next_day_min_costs = graph[next_day]
-			
-			curr_size = start_size
-			while curr_size <= next_end_size:
-				next_day_min_costs[curr_size] = {}
-				next_size_min_costs = next_day_min_costs[curr_size]
-				num_days_const = next_day - day_by_size_lookup[curr_size]
-				if (curr_size == start_size):
-					days_const = next_day - start_day
-					next_size_min_costs[days_const] = Node(next_day, curr_size, days_const=days_const)
-				else:
-					for days_const in range(num_days_const+1):
-						next_size_min_costs[days_const] = Node(next_day, curr_size, days_const=days_const)
-
-				curr_size += 1
 			
 			# cache the column lookups for this day and the next
 			curr_day_min_costs = graph[curr_day]
@@ -202,6 +210,11 @@ class Simulation(object):
 					else:
 						slope = (curr_max_rate - curr_min_rate) / (num_next_sizes - 1)
 						cost_step = curr_food_cost * slope * curr_discount
+
+					if curr_day < real_end_day:
+						num_next_sizes = int(round((size_by_size_lookup[curr_size] - curr_size)*restriction)) + 1
+					elif curr_max_size > end_size:
+						num_next_sizes = (end_size - curr_size) + 1
 					
 					# set up next size and current cost (edge weight)
 					curr_next_size = curr_size
@@ -211,8 +224,8 @@ class Simulation(object):
 					# for every next possible weight
 					for next_node in range(num_next_sizes):
 
-						if curr_next_size > max_size:
-							continue
+						if curr_next_size > end_size:
+							break
 						
 						# if the current node is staying the same size,
 						#	point edge to the next number of days constant
@@ -220,6 +233,13 @@ class Simulation(object):
 							next_day_const = curr_day_const + 1
 						else:
 							next_day_const = 0
+
+						if curr_next_size not in next_day_min_costs:
+							next_day_min_costs[curr_next_size] = {}
+
+						if next_day_const not in next_day_min_costs[curr_next_size]:
+							next_day_min_costs[curr_next_size][next_day_const] = Node(next_day, curr_next_size, days_const=next_day_const)
+
 						next_node = next_day_min_costs[curr_next_size][next_day_const]
 						next_cost = next_node.min_cost
 
@@ -228,7 +248,8 @@ class Simulation(object):
 							next_node.min_cost = curr_next_cost
 							next_node.prev_node = curr_node
 							next_node.min_edge = (curr_next_cost - curr_cost)
-							next_node.min_food = curr_node.min_food + curr_next_rate
+							next_node.min_food = curr_node.min_food + curr_next_rate							
+							next_node.min_curr_food = curr_next_rate
 
 						# increment for the next iteration
 						curr_next_rate += slope
@@ -239,18 +260,26 @@ class Simulation(object):
 		final_day_column = graph[end_day]
 		final_day_column = collections.OrderedDict(sorted(final_day_column.items()))
 		
+		
 		final_size = max_sizes[real_end_day]
-		ad_lib_node = graph[real_end_day][final_size][0]
+		
+		if restriction < 1.:
+			ad_lib_sim = Simulation(self.start_day, self.end_day, 0, self.food_costs, self.facility_costs, self.prices_per_kg, self.discount, self.cycles_per_year, 0.)	
+			ad_lib_sim.simulate()
+			ad_lib_node = ad_lib_sim.graph[real_end_day][final_size][0]
+		else:
+			ad_lib_node = graph[real_end_day][final_size][0]
+
 		ad_lib_profit = get_revenue(start_day, discount, prices_per_kg[final_size], real_end_day, final_size/10.)
 		ad_lib_profit -= ad_lib_node.min_cost
+		# ad_lib_profit = 0.
 
 		opp_cost = opportunity_cost(cycles_per_year, discount, real_end_day - start_day + 1,
 			end_day - start_day + 1, ad_lib_profit)
 
 		# iterate over each element
 		for curr_size, curr_days_const in final_day_column.items():
-			if curr_size > final_size:
-				break
+
 			for curr_day_const, curr_node in curr_days_const.items():
 				curr_node.min_rate = feeding_rate(curr_node.days_const, curr_size/10.)
 
@@ -274,6 +303,10 @@ class Simulation(object):
 		self.final_size = final_size
 		return
 
+	def print_nodes(self, array):
+		for n in array:
+			n.pp()
+
 	def print_end_costs(self):		
 		graph = self.graph
 		start_day = self.start_day
@@ -286,14 +319,11 @@ class Simulation(object):
 		final_day_column = graph[end_day+extend_days]
 		final_day_column = collections.OrderedDict(sorted(final_day_column.items()))
 
-		# print ("day, days_const, size, kg_food, feeding_cost, profit, day_cost, prev_node_size")
-		print ("day, days_const, size, kg_food, min_cost, revenue, opp_cost, profit, prev_size")
-
-		final_output = []
+		print ("day, days_const, size, kg_food, min_cost, revenue, opp_cost, profit, prev_size")		
 
 		# iterate over each element
 		for curr_size, curr_days_const in final_day_column.items():
-			if curr_size > self.final_size:
-				break
+
 			for curr_day_const, curr_node in curr_days_const.items():
 				print ("%d, %d, %f, %f, %f, %f, %f, %f, %f" % (curr_node.day, curr_node.days_const, curr_node.size/10., curr_node.min_food, curr_node.min_cost, curr_node.revenue, curr_node.opp_cost, curr_node.profit, curr_node.prev_node.size/10.))
+
