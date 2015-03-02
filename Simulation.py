@@ -32,7 +32,7 @@ class Node(object):
 		print ("%d, %d, %f, %f, %f, %f" % (curr_node.day, curr_node.days_const, curr_node.size/10., curr_node.min_curr_food, curr_node.min_food, curr_node.min_cost))
 
 class Simulation(object):
-	def __init__(self, start_day, end_day, extend_days, food_costs=0.25, facility_costs=0.35, prices_per_kg=2.89, r_value=0.075, cycles_per_year=2, restriction=0.0):
+	def __init__(self, start_day, end_day, extend_days, food_costs=0.25, facility_costs=0.35, prices_per_kg=2.89, r_value=0.075, cycles_per_year=2, restriction=0.10):
 		self.start_day = start_day
 		self.end_day = end_day
 		self.extend_days = extend_days
@@ -47,13 +47,13 @@ class Simulation(object):
 		self.start_day = start_day
 
 	def get_feeding_schedule(self, node):
-		curr_node = node.prev_node
+		curr_node = node
 
 		X = []
 		Y = []
 
-		while curr_node != None:
-			X.append(curr_node.day)
+		while curr_node.prev_node != None:
+			X.append(curr_node.day-1)
 			Y.append(curr_node.min_curr_food)
 			curr_node = curr_node.prev_node
 
@@ -85,7 +85,7 @@ class Simulation(object):
 		return self.get_feeding_schedule(optimal_node)
 
 	def get_optimal_path(self):
-		return get_optimal_feeding_schedule()
+		return self.get_optimal_feeding_schedule()
 
 	def get_path(self, node):
 		nodes = []
@@ -124,12 +124,12 @@ class Simulation(object):
 		restriction = 1. - self.restriction
 
 		# if the given food costs is a single value, create a dict for every day
-		if not isinstance(self.food_costs, list):
+		if not isinstance(self.food_costs, dict):
 			self.food_costs = build_const_food_cost_array(start_day, end_day, self.food_costs)
 		food_costs = self.food_costs
 
 		# if the given facility costs is a single value, create a dict for every day
-		if not isinstance(self.facility_costs, list):
+		if not isinstance(self.facility_costs, dict):
 			self.facility_costs = build_const_facility_cost_array(start_day, end_day, self.facility_costs)
 		facility_costs = self.facility_costs
 
@@ -144,7 +144,7 @@ class Simulation(object):
 		total_num_sizes = end_size - start_size + 1
 
 		# if the given prices per kg is a single value, create a dict for every day
-		if not isinstance(self.prices_per_kg, list):
+		if not isinstance(self.prices_per_kg, dict):
 			self.prices_per_kg = build_const_prices_per_kg_array(start_size, total_num_sizes, self.prices_per_kg)
 		prices_per_kg = self.prices_per_kg
 
@@ -155,7 +155,6 @@ class Simulation(object):
 		for curr_day in range(start_day, end_day):
 
 			next_day = curr_day+1
-			print("Calculating costs for day: %d" % curr_day)
 
 			# calculate number of reachable sizes
 			curr_size = start_size
@@ -190,8 +189,6 @@ class Simulation(object):
 
 					# calculate the minimum feeding cost based on the day diff
 					curr_min_rate = feeding_rate(curr_node.days_const, curr_size/10.)
-					if curr_day == 1:
-						print curr_min_rate
 					curr_node.min_rate = curr_min_rate
 
 					# calculate the max feeding rate based on current size
@@ -263,11 +260,19 @@ class Simulation(object):
 		final_day_column = graph[end_day]
 		final_day_column = collections.OrderedDict(sorted(final_day_column.items()))
 		
+		
 		final_size = max_sizes[real_end_day]
-		# ad_lib_node = graph[real_end_day][final_size][0]
-		# ad_lib_profit = get_revenue(start_day, discount, prices_per_kg[final_size], real_end_day, final_size/10.)
-		# ad_lib_profit -= ad_lib_node.min_cost
-		ad_lib_profit = 0.
+		
+		if restriction < 1.:
+			ad_lib_sim = Simulation(self.start_day, self.end_day, 0, self.food_costs, self.facility_costs, self.prices_per_kg, self.discount, self.cycles_per_year, 0.)	
+			ad_lib_sim.simulate()
+			ad_lib_node = ad_lib_sim.graph[real_end_day][final_size][0]
+		else:
+			ad_lib_node = graph[real_end_day][final_size][0]
+
+		ad_lib_profit = get_revenue(start_day, discount, prices_per_kg[final_size], real_end_day, final_size/10.)
+		ad_lib_profit -= ad_lib_node.min_cost
+		# ad_lib_profit = 0.
 
 		opp_cost = opportunity_cost(cycles_per_year, discount, real_end_day - start_day + 1,
 			end_day - start_day + 1, ad_lib_profit)
@@ -314,12 +319,11 @@ class Simulation(object):
 		final_day_column = graph[end_day+extend_days]
 		final_day_column = collections.OrderedDict(sorted(final_day_column.items()))
 
-		print ("day, days_const, size, kg_food, min_cost, revenue, opp_cost, profit, prev_size")
-
-		final_output = []
+		print ("day, days_const, size, kg_food, min_cost, revenue, opp_cost, profit, prev_size")		
 
 		# iterate over each element
 		for curr_size, curr_days_const in final_day_column.items():
 
 			for curr_day_const, curr_node in curr_days_const.items():
 				print ("%d, %d, %f, %f, %f, %f, %f, %f, %f" % (curr_node.day, curr_node.days_const, curr_node.size/10., curr_node.min_food, curr_node.min_cost, curr_node.revenue, curr_node.opp_cost, curr_node.profit, curr_node.prev_node.size/10.))
+
