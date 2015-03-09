@@ -125,13 +125,15 @@ class Simulation(object):
 
 		# if the given food costs is a single value, create a dict for every day
 		if not isinstance(self.food_costs, dict):
-			self.food_costs = build_const_food_cost_array(start_day, end_day, self.food_costs)
-		food_costs = self.food_costs
+			food_costs = build_const_food_cost_array(start_day, end_day, self.food_costs)
+		else:
+			food_costs = self.food_costs
 
 		# if the given facility costs is a single value, create a dict for every day
 		if not isinstance(self.facility_costs, dict):
-			self.facility_costs = build_const_facility_cost_array(start_day, end_day, self.facility_costs)
-		facility_costs = self.facility_costs
+			facility_costs = build_const_facility_cost_array(start_day, end_day, self.facility_costs)
+		else:
+			facility_costs = self.facility_costs
 
 		# generate lookup tables for max size at each day
 		max_sizes = build_max_size_array(start_day, end_day)
@@ -145,8 +147,9 @@ class Simulation(object):
 
 		# if the given prices per kg is a single value, create a dict for every day
 		if not isinstance(self.prices_per_kg, dict):
-			self.prices_per_kg = build_const_prices_per_kg_array(start_size, total_num_sizes, self.prices_per_kg)
-		prices_per_kg = self.prices_per_kg
+			prices_per_kg = build_const_prices_per_kg_array(start_size, total_num_sizes, self.prices_per_kg)
+		else:
+			prices_per_kg = self.prices_per_kg
 
 		# init the graph structure with the initial day's mincost set to zero
 		graph = { start_day : { start_size : { 0 : Node(start_day, start_size, min_cost=0.) } } }
@@ -213,7 +216,7 @@ class Simulation(object):
 
 					if curr_day < real_end_day:
 						num_next_sizes = int(round((size_by_size_lookup[curr_size] - curr_size)*restriction)) + 1
-					elif curr_max_size > end_size:
+					elif restriction == 1. and curr_max_size > end_size:
 						num_next_sizes = (end_size - curr_size) + 1
 					
 					# set up next size and current cost (edge weight)
@@ -223,9 +226,6 @@ class Simulation(object):
 
 					# for every next possible weight
 					for next_node in range(num_next_sizes):
-
-						if curr_next_size > end_size:
-							break
 						
 						# if the current node is staying the same size,
 						#	point edge to the next number of days constant
@@ -259,23 +259,25 @@ class Simulation(object):
 		# cache the last column in the graph, i.e. the column of nodes on the final day
 		final_day_column = graph[end_day]
 		final_day_column = collections.OrderedDict(sorted(final_day_column.items()))
-		
-		
-		final_size = max_sizes[real_end_day]
-		
+
 		if restriction < 1.:
-			ad_lib_sim = Simulation(self.start_day, self.end_day, 0, self.food_costs, self.facility_costs, self.prices_per_kg, self.discount, self.cycles_per_year, 0.)	
+			final_size = max_sizes[end_day]
+			ad_lib_sim = Simulation(self.start_day, end_day, 0, self.food_costs, self.facility_costs, self.prices_per_kg, self.discount, self.cycles_per_year, 0.)	
 			ad_lib_sim.simulate()
-			ad_lib_node = ad_lib_sim.graph[real_end_day][final_size][0]
-		else:
+			ad_lib_node = ad_lib_sim.graph[end_day][final_size][0]
+			ad_lib_profit = ad_lib_node.profit
+			opp_cost = 0.
+			ad_lib_node.pp()
+			print ad_lib_profit
+
+
+		else:			
+			final_size = max_sizes[real_end_day]
 			ad_lib_node = graph[real_end_day][final_size][0]
-
-		ad_lib_profit = get_revenue(start_day, discount, prices_per_kg[final_size], real_end_day, final_size/10.)
-		ad_lib_profit -= ad_lib_node.min_cost
-		# ad_lib_profit = 0.
-
-		opp_cost = opportunity_cost(cycles_per_year, discount, real_end_day - start_day + 1,
-			end_day - start_day + 1, ad_lib_profit)
+			ad_lib_profit = get_revenue(start_day, discount, prices_per_kg[final_size], end_day, final_size/10.)
+			ad_lib_profit -= ad_lib_node.min_cost
+			opp_cost = opportunity_cost(cycles_per_year, discount, real_end_day - start_day + 1,
+				end_day - start_day + 1, ad_lib_profit)
 
 		# iterate over each element
 		for curr_size, curr_days_const in final_day_column.items():
@@ -283,7 +285,15 @@ class Simulation(object):
 			for curr_day_const, curr_node in curr_days_const.items():
 				curr_node.min_rate = feeding_rate(curr_node.days_const, curr_size/10.)
 
-				if (extend_days > 0 and curr_size == final_size):
+				if restriction < 1.: # the animals can't be the same size as the computed ad-lib of the non-restricted sim, no opp cost. Calculate the necessary premium.
+					curr_node.equal_price = (ad_lib_profit + curr_node.min_cost) / (curr_size/10. * discount_factor_value(curr_node.day - start_day, discount))
+					curr_node.premium = curr_node.equal_price - self.prices_per_kg # needs to not assume this value since it may be a list
+
+				else: # there is no restriction, opportunity cost is related the final size on the real end day
+					curr_node.equal_price = 0.
+					curr_node.premium = 0.
+
+				if (extend_days > 0 and curr_size == final_size): # will never happen if restricted
 					earlier_node = graph[curr_node.day - curr_node.days_const][curr_node.size][0]
 					curr_node.copy_from(earlier_node)
 					curr_node.opp_cost = opportunity_cost(cycles_per_year, discount, real_end_day - start_day + 1,
@@ -292,7 +302,7 @@ class Simulation(object):
 					curr_node.opp_cost = opp_cost
 
 				# calculate profit based on revenue and total expenses
-				revenue = get_revenue(start_day, discount, prices_per_kg[curr_node.size], curr_node.day, curr_node.size/10.)
+				revenue = get_revenue(start_day, discount, self.prices_per_kg, curr_node.day, curr_node.size/10.)
 				profit = revenue - curr_node.min_cost
 				profit += curr_node.opp_cost
 				
@@ -325,5 +335,5 @@ class Simulation(object):
 		for curr_size, curr_days_const in final_day_column.items():
 
 			for curr_day_const, curr_node in curr_days_const.items():
-				print ("%d, %d, %f, %f, %f, %f, %f, %f, %f" % (curr_node.day, curr_node.days_const, curr_node.size/10., curr_node.min_food, curr_node.min_cost, curr_node.revenue, curr_node.opp_cost, curr_node.profit, curr_node.prev_node.size/10.))
+				print ("%d, %d, %f, %f, %f, %f, %f, %f, %f, %f, %f" % (curr_node.day, curr_node.days_const, curr_node.size/10., curr_node.min_food, curr_node.min_cost, curr_node.revenue, curr_node.opp_cost, curr_node.profit, curr_node.prev_node.size/10., curr_node.equal_price, curr_node.premium))
 

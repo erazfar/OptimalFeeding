@@ -67,7 +67,7 @@ def calculate_facility_costs(lst):
 	return total_cost
 
 # by default, set end_day to 80
-def main(start_day=1, end_day=80, extend_days=0, price_per_kg=0.25, food_cost=0.35, facility_cost=2.89, r_value=0.075, cycles_per_year=2, restriction=0.1):
+def main(start_day=1, end_day=80, extend_days=0, price_per_kg=0.25, food_cost=0.35, facility_cost=2.89, r_value=0.00, cycles_per_year=2, restriction=0.05):
 
 	sim = Simulation(start_day, end_day, extend_days, price_per_kg, food_cost, facility_cost, r_value, cycles_per_year, restriction)
 	sim.simulate()
@@ -78,7 +78,9 @@ if __name__ == "__main__":
 	
 	if (len(sys.argv) == 3):
 		sim = main(int(sys.argv[1]), int(sys.argv[2]))
-	elif (len(sys.argv) >= 4):
+	elif (len(sys.argv) == 4):
 		sim = main(int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]))
+	elif (len(sys.argv) >= 5):
+		sim = main(int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]), restriction=float(sys.argv[4]))
 	else:
 		sim = main()
