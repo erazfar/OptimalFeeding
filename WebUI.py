@@ -2,6 +2,9 @@ import sqlite3
 from flask import *
 import Simulation as sim
 
+import plotly.plotly as py
+from plotly.graph_objs import *
+
 # Database config
 
 app = Flask(__name__)
@@ -36,9 +39,33 @@ def index_post(name = None):
 		Y = arrays[1]
 		Z = arrays[2]
 
+		graph_url = get_graph_url(X, Y, Z)
+
 		#final_output = sim.(start_day, end_day, extend_days, price_per_kg, food_cost, facility_cost, r_value) #change this call to use all parameters
-		return render_template("output.html", xvals = X, yvals = Y, zvals = Z)
+		print "plot url: ", graph_url
+		return render_template("output.html", ploturl = graph_url)
 		#return render_template("output.html")
+
+def get_graph_url(x_coords, y_coords, z_coords):
+	data = Data([
+    		Scatter3d(
+    			x = x_coords,
+    			y = y_coords,
+    			z = z_coords
+    		)	
+		])
+	layout = Layout(
+    	showlegend=False,
+	    autosize=True,
+	    width=467,
+	    height=696,
+	    scene=Scene(
+	        cameraposition=[[-0.5886621475219727, 0.5467357039451599, 0.5828786492347717, 0.12169373780488968], [0, 0, 0], 2.60469069117963]
+	    )
+	)
+	fig = Figure(data=data, layout=layout)
+	plot_url = py.plot(fig, auto_open=False)
+	return plot_url
 
 
 if __name__ == '__main__':
