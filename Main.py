@@ -67,9 +67,9 @@ def calculate_facility_costs(lst):
 	return total_cost
 
 # by default, set end_day to 80
-def main(start_day=1, end_day=80, extend_days=0, price_per_kg=0.25, food_cost=0.35, facility_cost=2.89, r_value=0.00, cycles_per_year=2, restriction=0.05):
+def main(start_day=1, end_day=80, extend_days=0, food_cost=0.25, facility_cost=0.35, price_per_kg=2.89, r_value=0.075, cycles_per_year=2, restriction=0.05):
 
-	sim = Simulation(start_day, end_day, extend_days, price_per_kg, food_cost, facility_cost, r_value, cycles_per_year, restriction)
+	sim = Simulation(start_day, end_day, extend_days, food_cost, facility_cost, price_per_kg, r_value, cycles_per_year, restriction)
 	sim.simulate()
 	sim.print_end_costs()
 	return sim
