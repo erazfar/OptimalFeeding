@@ -1,0 +1,97 @@
+<html lang="en"><head>
+	<meta charset="UTF-8">
+	<title>Optimal Feeding</title>
+	<link rel="stylesheet" href="./css/styles.css">
+	<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">	
+	<link rel="icon" type="image/png" sizes="16x16" href="./img/favicon.ico">
+
+</head>
+<body>
+	<header>
+		<h1 class="aligncentertext"> Optimal Feeding. <br> A Smart Way To Feed. </h1>
+	</header>
+	<div class="top top-scroll top-resized">
+		<h1 class="logo logo-resized"> Optimal Feeding </h1>
+		<ul class="nav nav-resized"> 
+			<li class="nav-about">
+				<h2>About</h2>
+			</li>
+			<li class="nav-gallery">
+				<h2>Gallery</h2>
+			</li>						
+			<li class="nav-contact active">
+				<h2>Contact</h2>
+			</li>			
+		</ul>
+	</div>
+
+	<figure class="layover" style="display: none;"> 
+		<div class="modal">
+			<h1 class="aligncentertext"> Random Modal Feature </h1>
+		</div>
+	</figure>
+	
+	<figure class="about">
+		<h1 class="aligncentertext"> About </h1>
+		<ul>
+			<li><i class="fa fa-5x fa-calendar"></i>
+				<p>Plan Ahead</p>
+			</li>
+			<li><i class="fa fa-5x fa-users"></i>
+				<p>Be Organized</p>
+			</li>
+			<li><i class="fa fa-5x fa-usd"></i>
+				<p>Save Money</p>
+			</li>
+		</ul>
+		
+	</figure>
+
+	<div class="carousel">
+		<h1 class="aligncentertext"> What it looks like </h1>
+		<div id="right">❭</div>
+		<div id="left">❬</div>
+		<img id="img1" src="http://www.iae.co.uk/images/expand/Cattle%20Feed%20Barriers/COWS%20FEEDING%20EURO%20YOKES.jpg">
+		<img id="img2" src="http://www.vermontvacation.com/-/media/Images/Articles/DiscoverVermont/Farms/VermontFarms.ashx?w=485&h=250&as=1">
+		<img id="img3" src="http://www.bbc.co.uk/media/images/66107000/jpg/_66107992_139523581.jpg">
+	</div>
+
+	<figure class="contact">
+		<h1 class="aligncentertext"> Contact </h1>
+		<div class="contact-wrapper aligncentertext">
+			<i class="fa fa-5x fa-facebook-square"></i>
+			<i class="fa fa-5x fa-twitter"></i>
+			<i class="fa fa-5x fa-instagram"></i>
+		</div>
+	</figure>
+
+	<figure class="video">
+<div>
+<iframe width="640" height="480" frameborder="0" seamless="seamless" scrolling="no" src="https://plot.ly/~ehsan.razfar/118/" ></iframe>
+
+</div>
+
+<h2>Simulation:</h2>
+    <d1>
+    <form action="{{url_for('index_post')}}" method="POST">
+    	<dt>Start day:
+        <dt><input type="text" name="Start day">
+        <dt>End day:
+        <dt><input type="text" name="End day">
+       	<dt>Extend days:
+        <dt><input type="text" name="Extend days">
+       	<dt>Price per kg:
+        <dt><input type="text" name="Price per kg">
+        <dt>Food cost:
+        <dt><input type="text" name="Food cost">
+        <dt>Facility cost:
+        <dt><input type="text" name="Facility cost">
+        <dt>R value:
+        <dt><input type="text" name="R value">
+        <dt>Cycles per year:
+        <dt><input type="text" name="Cycles per year"><br><br>
+        <input type="submit" name="my-form" value="Send">
+    </form>
+	</d1>
+
+</body></html>

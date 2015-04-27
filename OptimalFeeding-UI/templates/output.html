@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+<html lang="en">
+<body>
+
+	<iframe width="1000" height="800" frameborder="0" seamless="seamless" scrolling="no" src= {{ploturl}} ></iframe>
+
+	<a href= "{{url_for('index')}}" >Run another simulation</a>
+
+</body>
+</html>
