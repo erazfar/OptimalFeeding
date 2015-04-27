@@ -5856,6 +5856,7 @@ table {
 input,
 .form-control {
   padding: 7px;
+  width: 300px;
 }
 label,
 .control-label,
