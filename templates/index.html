@@ -5,22 +5,20 @@
     <h2>Simulation:</h2>
     <d1>
     <form action="{{url_for('index_post')}}" method="POST">
-    	<dt>Start day:
-        <dt><input type="text" name="Start day">
-        <dt>End day:
-        <dt><input type="text" name="End day">
-       	<dt>Extend days:
-        <dt><input type="text" name="Extend days">
-       	<dt>Price per kg:
-        <dt><input type="text" name="Price per kg">
-        <dt>Food cost:
-        <dt><input type="text" name="Food cost">
-        <dt>Facility cost:
-        <dt><input type="text" name="Facility cost">
-        <dt>R value:
-        <dt><input type="text" name="R value">
-        <dt>Cycles per year:
-        <dt><input type="text" name="Cycles per year"><br><br>
+    	<dt>Length of simulation (days):
+        <dt><input type="text" name="sim_len">
+        <dt>Length of initial restriction period (days):
+        <dt><input type="text" name="restr_len">
+        <dt>%Restriction (e.g. enter 7.5 for 7.5%):
+        <dt><input type="text" name="restr">
+       	<dt>End day market price of cattle ($/kg):
+        <dt><input type="text" name="market_price">
+        <dt>Feed cost ($/kg):
+        <dt><input type="text" name="feed_cost">
+        <dt>Facility cost ($/day):
+        <dt><input type="text" name="fac_cost">
+        <dt>%Interest rate (e.g. enter 7.5 for 7.5%):
+        <dt><input type="text" name="int_rate"><br><br>
         <input type="submit" name="my-form" value="Send">
     </form>
 	</d1>
